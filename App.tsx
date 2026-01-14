@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LESSONS } from './constants';
 import { Lesson, LessonStep } from './types';
 import LessonCard from './components/LessonCard';
@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const handleNextStep = () => {
     if (activeLesson && currentStep < activeLesson.steps.length - 1) {
       setCurrentStep(currentStep + 1);
-      setAiResponse(null); // Clear previous AI help
+      setAiResponse(null);
     } else {
       setActiveLesson(null);
       setCurrentStep(0);
@@ -50,41 +50,41 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setActiveLesson(null)}>
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
-            <span className="text-xl font-bold tracking-tight">DataExplaining</span>
-          </div>
-          <nav className="hidden md:flex space-x-8 text-sm font-medium text-gray-600">
-            <a href="#" className="hover:text-blue-600">Catalog</a>
-            <a href="#" className="hover:text-blue-600">Playground</a>
-            <button 
-              onClick={() => setIsChatbotOpen(true)}
-              className="hover:text-blue-600 font-bold flex items-center"
-            >
-              <span className="mr-1.5">Ask AI</span>
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            </button>
-          </nav>
+    <div className="min-h-screen bg-[#FDFCFB] text-[#121212] selection:bg-slate-900 selection:text-white flex flex-col">
+      {/* Editorial Header */}
+      <nav className="h-16 border-b border-black/5 flex items-center justify-between px-8 bg-[#FDFCFB] z-50 shrink-0">
+        <div 
+          className="flex items-center space-x-4 cursor-pointer" 
+          onClick={() => setActiveLesson(null)}
+        >
+          <div className="w-8 h-8 bg-[#121212] flex items-center justify-center text-[#FDFCFB] text-xs font-mono font-bold tracking-tighter">DE</div>
+          <span className="text-sm font-bold tracking-[0.2em] uppercase">DataExplaining</span>
         </div>
-      </header>
+        
+        <div className="flex items-center space-x-8">
+          <button 
+            onClick={() => setIsChatbotOpen(true)}
+            className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#666] hover:text-[#121212] transition-colors flex items-center"
+          >
+            <span className="w-1.5 h-1.5 bg-[#2A4D69] rounded-full mr-2"></span>
+            Reference Desk
+          </button>
+        </div>
+      </nav>
 
-      <main className="flex-grow">
+      <main className="flex-grow overflow-hidden">
         {!activeLesson ? (
-          <section className="max-w-7xl mx-auto px-4 py-12">
-            <div className="text-center mb-16">
-              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-                Master Data Science, <span className="text-blue-600">Interactively.</span>
+          <div className="max-w-6xl mx-auto px-8 py-24">
+            <header className="mb-24 border-l border-black/10 pl-12 max-w-3xl">
+              <h1 className="text-6xl font-serif italic mb-8 leading-tight">
+                An Interactive <br/>Compendium of Models.
               </h1>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                No dry textbooks or long videos. Learn ML models by breaking them, building them, and seeing how they work under the hood.
+              <p className="text-xl text-[#666] font-normal leading-relaxed max-w-xl">
+                A visual curriculum dedicated to the mathematical intuition behind modern algorithms. Precision tools for structural learning.
               </p>
-            </div>
+            </header>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
               {LESSONS.map((lesson) => (
                 <LessonCard 
                   key={lesson.id} 
@@ -96,191 +96,108 @@ const App: React.FC = () => {
                 />
               ))}
             </div>
-          </section>
+          </div>
         ) : (
-          <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
-            {/* Sidebar Navigation */}
-            <aside className="hidden lg:block w-72 bg-gray-50 border-r border-gray-200 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto">
-              <div className="p-6">
+          <div className="flex h-full">
+            {/* The Index (Table of Contents) */}
+            <aside className="w-64 border-r border-black/5 flex flex-col bg-[#F9F8F6] shrink-0">
+              <div className="p-8">
                 <button 
                   onClick={() => setActiveLesson(null)}
-                  className="text-gray-500 flex items-center text-xs font-bold uppercase tracking-wider mb-8 hover:text-blue-600 transition-colors"
+                  className="mb-12 text-[9px] font-bold uppercase tracking-[0.3em] text-[#999] hover:text-[#121212] transition-colors flex items-center group"
                 >
-                  <svg className="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Exit Lesson
+                  <svg className="w-3 h-3 mr-2 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
+                  Library Home
                 </button>
 
-                <div className="mb-6">
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block mb-1">{activeLesson.category}</span>
-                  <h3 className="text-lg font-bold text-gray-900 leading-tight">{activeLesson.title}</h3>
+                <div className="mb-12">
+                  <span className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-1">Vol. {activeLesson.category}</span>
+                  <h3 className="text-sm font-bold leading-tight font-serif">{activeLesson.title}</h3>
                 </div>
 
-                <div className="space-y-1">
-                  {activeLesson.steps.map((s, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setCurrentStep(idx);
-                        setAiResponse(null);
-                      }}
-                      className={`w-full text-left p-3 rounded-xl transition-all flex items-start space-x-3 group ${
-                        currentStep === idx 
-                        ? 'bg-white shadow-sm border border-gray-200 ring-2 ring-blue-500/10' 
-                        : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      <div className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 transition-colors ${
-                        currentStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 group-hover:bg-gray-300'
-                      }`}>
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <p className={`text-sm font-bold leading-tight ${currentStep === idx ? 'text-gray-900' : 'text-gray-500'}`}>
-                          {s.title}
-                        </p>
-                        {currentStep === idx && (
-                          <div className="w-full h-1 bg-blue-100 rounded-full mt-2 overflow-hidden">
-                            <div className="h-full bg-blue-500 animate-in slide-in-from-left duration-1000" style={{ width: '100%' }}></div>
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                <div className="space-y-4">
+                  {activeLesson.steps.map((s, idx) => {
+                    const isActive = currentStep === idx;
+                    const isCompleted = idx < currentStep;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => { setCurrentStep(idx); setAiResponse(null); }}
+                        className={`w-full text-left flex items-start py-1 transition-all ${isActive ? 'text-[#121212]' : 'text-[#999] hover:text-[#666]'}`}
+                      >
+                        <span className="font-mono text-[10px] mr-3 mt-1 leading-none w-4 shrink-0">
+                          {isCompleted ? '✓' : (idx + 1).toString().padStart(2, '0')}
+                        </span>
+                        <span className={`text-xs font-bold leading-relaxed ${isActive ? 'border-b border-[#2A4D69]' : ''}`}>{s.title}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </aside>
 
-            {/* Content Column */}
-            <div className="w-full lg:w-96 xl:w-[450px] bg-white border-r border-gray-200 p-8 flex flex-col h-[calc(100vh-64px)] overflow-y-auto">
-              <div className="flex-grow">
-                <div className="lg:hidden mb-6 flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
-                   <button onClick={() => setActiveLesson(null)} className="text-blue-600 font-bold text-xs">Back</button>
-                   <span className="text-[10px] font-black uppercase text-gray-400">Step {currentStep + 1} of {activeLesson.steps.length}</span>
+            {/* The Manuscript (Text) */}
+            <div className="w-[480px] shrink-0 border-r border-black/5 bg-white flex flex-col h-full shadow-[20px_0_40px_rgba(0,0,0,0.01)]">
+              <div className="flex-grow p-12 overflow-y-auto">
+                <div className="mb-16">
+                  <div className="font-mono text-[10px] font-bold text-[#999] uppercase tracking-[0.4em] mb-4">Figure {(currentStep + 1).toString().padStart(2, '0')}</div>
+                  <h2 className="text-4xl font-serif italic mb-8">{step?.title}</h2>
+                  <div className="w-12 h-px bg-[#2A4D69]"></div>
                 </div>
                 
-                <div className="mb-6">
-                  <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Active Step</span>
-                  <h2 className="text-3xl font-bold mt-2 leading-tight">{step?.title}</h2>
-                </div>
-                
-                <p className="text-gray-700 leading-relaxed text-lg mb-8">
+                <p className="text-[#333] leading-loose text-base mb-16 font-normal">
                   {step?.description}
                 </p>
 
-                <div className="flex space-x-3 mb-8">
+                <div className="pt-8 border-t border-black/5">
                   <button 
                     onClick={askAi}
-                    className="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#666] hover:text-[#2A4D69] transition-all inline-flex items-center"
                   >
-                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.536 15.657a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM6.464 14.95a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 011.414-1.414l.707.707z" />
-                    </svg>
-                    Explain this simply
+                    Consult Reference Material
+                    {isAiLoading && <span className="ml-2 flex space-x-0.5"><span className="w-0.5 h-0.5 bg-[#2A4D69] animate-pulse"></span><span className="w-0.5 h-0.5 bg-[#2A4D69] animate-pulse delay-75"></span></span>}
                   </button>
-                </div>
 
-                {showAiHelper && (
-                  <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-8 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-blue-800 uppercase">AI Explainer</span>
-                      <button onClick={() => setShowAiHelper(false)} className="text-blue-400 hover:text-blue-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
+                  {showAiHelper && !isAiLoading && (
+                    <div className="mt-6 bg-[#F9F8F6] p-6 text-sm text-[#444] leading-relaxed border-l border-[#2A4D69] font-normal italic">
+                      "{aiResponse}"
                     </div>
-                    {isAiLoading ? (
-                      <div className="flex space-x-2 items-center justify-center py-4">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-blue-900 leading-relaxed italic">
-                        "{aiResponse}"
-                      </p>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t border-gray-100 mt-auto">
+              <div className="p-12 bg-[#F9F8F6] border-t border-black/5">
                 <button 
                   onClick={handleNextStep}
-                  className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center group"
+                  className="w-full bg-[#121212] text-[#FDFCFB] py-5 text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-[#2A4D69] transition-all flex items-center justify-center group"
                 >
-                  {currentStep === activeLesson.steps.length - 1 ? 'Finish Lesson' : step?.actionLabel || 'Continue'}
-                  <svg className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                  {currentStep === activeLesson.steps.length - 1 ? 'Archive Unit' : step?.actionLabel || 'Advance Manuscript'}
+                  <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                 </button>
               </div>
             </div>
 
-            {/* Right Column: Interaction */}
-            <div className="flex-grow bg-gray-100 flex items-center justify-center p-6 md:p-12 relative overflow-hidden h-[calc(100vh-64px)]">
-               {/* Decorative background elements */}
-               <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-200 rounded-full opacity-30 blur-3xl pointer-events-none"></div>
-               <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-200 rounded-full opacity-30 blur-3xl pointer-events-none"></div>
+            {/* The Laboratory (Simulation) */}
+            <div className="flex-grow flex items-center justify-center p-16 bg-[#FDFCFB] overflow-hidden relative">
+               {/* Technical Background Details */}
+               <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
 
-               <div className="z-10 w-full flex justify-center h-full items-center">
-                  <div className="w-full max-w-4xl transform scale-90 md:scale-100 origin-center">
-                    {/* Dynamic Interactive Component Rendering */}
-                    {activeLesson.id === 'linear-regression' && (
-                      <RegressionSim showError={currentStep >= 2} />
-                    )}
-
-                    {activeLesson.id === 'gradient-descent' && (
-                      <GradientDescentSim />
-                    )}
-
-                    {activeLesson.id === 'logistic-regression' && (
-                      <LogisticSim />
-                    )}
-
-                    {activeLesson.id === 'overfitting' && (
-                      <OverfittingSim />
-                    )}
-
-                    {activeLesson.id === 'clustering' && (
-                      <ClusteringSim />
-                    )}
-
-                    {activeLesson.id === 'knn' && (
-                      <KNNSim />
-                    )}
-
-                    {activeLesson.id === 'decision-trees' && (
-                      <DecisionTreeSim />
-                    )}
-
-                    {activeLesson.id === 'random-forest' && (
-                      <RandomForestSim />
-                    )}
-
-                    {activeLesson.id === 'svm' && (
-                      <SVMSim />
-                    )}
-
-                    {activeLesson.id === 'cnn-filters' && (
-                      <CNNSim />
-                    )}
-
-                    {activeLesson.id === 'neural-networks' && (
-                      <NeuralNetSim />
-                    )}
-
-                    {activeLesson.id === 'pca' && (
-                      <PCASim />
-                    )}
-
-                    {activeLesson.id === 'reinforcement-learning' && (
-                      <ReinforcementSim />
-                    )}
-
-                    {activeLesson.id === 'algorithmic-bias' && (
-                      <BiasSim step={currentStep} />
-                    )}
+               <div className="w-full h-full flex items-center justify-center relative">
+                  <div className="w-full max-w-4xl p-8 bg-white border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] transition-all duration-700">
+                    {activeLesson.id === 'linear-regression' && <RegressionSim showError={currentStep >= 2} />}
+                    {activeLesson.id === 'gradient-descent' && <GradientDescentSim />}
+                    {activeLesson.id === 'logistic-regression' && <LogisticSim />}
+                    {activeLesson.id === 'overfitting' && <OverfittingSim />}
+                    {activeLesson.id === 'clustering' && <ClusteringSim />}
+                    {activeLesson.id === 'knn' && <KNNSim />}
+                    {activeLesson.id === 'decision-trees' && <DecisionTreeSim />}
+                    {activeLesson.id === 'random-forest' && <RandomForestSim />}
+                    {activeLesson.id === 'svm' && <SVMSim />}
+                    {activeLesson.id === 'cnn-filters' && <CNNSim />}
+                    {activeLesson.id === 'neural-networks' && <NeuralNetSim />}
+                    {activeLesson.id === 'pca' && <PCASim />}
+                    {activeLesson.id === 'reinforcement-learning' && <ReinforcementSim />}
+                    {activeLesson.id === 'algorithmic-bias' && <BiasSim step={currentStep} />}
                   </div>
                </div>
             </div>
@@ -288,36 +205,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Floating Action Button for AI Chatbot */}
-      {!isChatbotOpen && (
-        <button 
-          onClick={() => setIsChatbotOpen(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-110 active:scale-95 z-[90]"
-        >
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
-        </button>
-      )}
-
-      {/* AI Chatbot Component */}
-      <AiChatbot 
-        isOpen={isChatbotOpen} 
-        onClose={() => setIsChatbotOpen(false)} 
-      />
-
-      {/* Footer - Only show on home screen */}
-      {!activeLesson && (
-        <footer className="bg-white border-t border-gray-200 py-8">
-          <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-            <p>© 2024 DataExplaining. Empowering the next generation of data scientists.</p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-blue-600">Privacy</a>
-              <a href="#" className="hover:text-blue-600">Terms</a>
-              <a href="#" className="hover:text-blue-600">Github</a>
-            </div>
-          </div>
-        </footer>
-      )}
+      <AiChatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
     </div>
   );
 };

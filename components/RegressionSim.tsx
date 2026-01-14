@@ -27,20 +27,12 @@ const RegressionSim: React.FC<Props> = ({ showError = false }) => {
   }, [slope, intercept]);
 
   return (
-    <div className="flex flex-col items-center bg-white p-6 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100">
-      <div className="relative w-full h-[400px] border-l-2 border-b-2 border-gray-300 bg-gray-50 overflow-hidden rounded-lg">
-        {/* Grid Lines */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <React.Fragment key={i}>
-              <div className="absolute w-full h-px bg-black" style={{ top: `${i * 10}%` }} />
-              <div className="absolute h-full w-px bg-black" style={{ left: `${i * 10}%` }} />
-            </React.Fragment>
-          ))}
-        </div>
+    <div className="w-full flex flex-col items-center bg-white p-4">
+      <div className="relative w-full aspect-video bg-[#FDFCFB] border border-black/10 overflow-hidden">
+        {/* Technical Grid */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-        {/* Visualizing the "Squares" in Mean Squared Error */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 400" preserveAspectRatio="none">
           {showError && errorDetails.residuals.map((r, i) => {
             const size = Math.abs(r.residual);
             const top = r.residual > 0 ? r.predictedY : r.y;
@@ -51,25 +43,26 @@ const RegressionSim: React.FC<Props> = ({ showError = false }) => {
                 y={top}
                 width={size}
                 height={size}
-                fill="rgba(239, 68, 68, 0.15)"
-                stroke="rgba(239, 68, 68, 0.4)"
-                strokeWidth="1"
+                fill="#2A4D69"
+                className="opacity-5"
+                stroke="#2A4D69"
+                strokeWidth="0.5"
+                strokeDasharray="1,1"
               />
             );
           })}
           
-          {/* Regression Line */}
+          {/* Main Regression Line */}
           <line
             x1="0"
             y1={intercept}
             x2="500"
             y2={slope * 500 + intercept}
-            stroke="#3b82f6"
-            strokeWidth="4"
-            strokeLinecap="round"
+            stroke="#121212"
+            strokeWidth="1.5"
           />
 
-          {/* Residual Lines */}
+          {/* Residual Vertical Lines */}
           {showError && errorDetails.residuals.map((r, i) => (
             <line
               key={`line-${i}`}
@@ -77,59 +70,62 @@ const RegressionSim: React.FC<Props> = ({ showError = false }) => {
               y1={r.y}
               x2={r.x}
               y2={r.predictedY}
-              stroke="#ef4444"
-              strokeWidth="2"
-              strokeDasharray="4"
+              stroke="#2A4D69"
+              strokeWidth="0.8"
+              strokeDasharray="2,2"
+              className="opacity-40"
             />
           ))}
         </svg>
 
-        {/* Points */}
+        {/* Data Points */}
         {DATA_POINTS.map((p, i) => (
           <div
             key={i}
-            className="absolute w-4 h-4 bg-gray-900 rounded-full border-2 border-white shadow-sm z-10"
-            style={{ left: p.x - 8, top: p.y - 8 }}
+            className="absolute w-1.5 h-1.5 bg-[#121212] rotate-45 z-10"
+            style={{ left: `${(p.x / 500) * 100}%`, top: `${(p.y / 400) * 100}%`, transform: 'translate(-50%, -50%) rotate(45deg)' }}
           />
         ))}
+        
+        {/* Axes Indicators */}
+        <div className="absolute bottom-2 right-2 font-mono text-[8px] text-[#999] uppercase tracking-widest">Dimension: X | Y</div>
       </div>
 
-      <div className="mt-8 w-full space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Slope (m)</label>
-            <input
-              type="range" min="-2" max="1" step="0.01"
-              value={slope}
-              onChange={(e) => setSlope(parseFloat(e.target.value))}
-              className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <div className="text-center font-mono text-sm mt-1">{slope.toFixed(2)}</div>
+      <div className="mt-12 w-full max-w-xl grid grid-cols-2 gap-16">
+        <div className="space-y-4">
+          <div className="flex justify-between font-mono text-[10px] font-bold uppercase tracking-widest text-[#999]">
+            <span>Coefficient (θ1)</span>
+            <span className="text-[#121212]">{slope.toFixed(2)}</span>
           </div>
-          <div>
-            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Intercept (b)</label>
-            <input
-              type="range" min="0" max="500" step="1"
-              value={intercept}
-              onChange={(e) => setIntercept(parseFloat(e.target.value))}
-              className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-             <div className="text-center font-mono text-sm mt-1">{intercept.toFixed(0)}</div>
-          </div>
+          <input
+            type="range" min="-2" max="1" step="0.01"
+            value={slope}
+            onChange={(e) => setSlope(parseFloat(e.target.value))}
+            className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]"
+          />
         </div>
-
-        {showError && (
-          <div className="bg-red-50 border-2 border-red-100 p-4 rounded-xl text-center transform transition-all animate-in zoom-in-95">
-            <span className="text-[10px] uppercase font-black text-red-400 block mb-1">Current Mean Squared Error</span>
-            <span className="text-3xl font-black text-red-600 tabular-nums">
-              {Math.round(errorDetails.mse).toLocaleString()}
-            </span>
-            <p className="text-xs text-red-500 mt-2 font-medium">
-              Goal: Minimize the total area of the red squares!
-            </p>
+        <div className="space-y-4">
+          <div className="flex justify-between font-mono text-[10px] font-bold uppercase tracking-widest text-[#999]">
+            <span>Intercept (θ0)</span>
+            <span className="text-[#121212]">{intercept.toFixed(0)}</span>
           </div>
-        )}
+          <input
+            type="range" min="0" max="500" step="1"
+            value={intercept}
+            onChange={(e) => setIntercept(parseFloat(e.target.value))}
+            className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]"
+          />
+        </div>
       </div>
+
+      {showError && (
+        <div className="mt-16 flex flex-col items-center border-t border-black/5 pt-8 w-full">
+          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.4em] text-[#CCC] mb-2">Empirical Variance (MSE)</span>
+          <span className="text-5xl font-serif italic text-[#121212] tabular-nums">
+            {Math.round(errorDetails.mse).toLocaleString()}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

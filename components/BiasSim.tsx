@@ -176,4 +176,31 @@ const BiasSim: React.FC<Props> = ({ step }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
                 <div className="flex items-center space-x-2 mb-2 text-orange-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                  <span className="font-bold text-sm">Loan Applications</span>
+                </div>
+                <p className="text-xs text-orange-800 leading-relaxed">
+                  Automated lending systems have been found to flag minority neighborhoods as "high risk" even when applicants have strong credit scores, effectively automating historical redlining.
+                </p>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                <div className="flex items-center space-x-2 mb-2 text-purple-700">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                   <span className="font-bold text-sm">Facial Recognition</span>
+                </div>
+                <p className="text-xs text-purple-800 leading-relaxed">
+                  Research shows that many facial recognition models perform significantly worse on women and people of color because they were trained on datasets that over-represented white men.
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-gray-400 italic text-center">
+              Algorithmic bias isn't just a technical glitch; it's a social responsibility.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default BiasSim;

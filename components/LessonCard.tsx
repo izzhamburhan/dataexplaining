@@ -8,32 +8,28 @@ interface Props {
 }
 
 const LessonCard: React.FC<Props> = ({ lesson, onClick }) => {
-  const getDifficultyColor = (diff: string) => {
-    switch (diff) {
-      case 'Beginner': return 'bg-green-100 text-green-700';
-      case 'Intermediate': return 'bg-yellow-100 text-yellow-700';
-      case 'Advanced': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
   return (
     <div 
       onClick={onClick}
-      className="group cursor-pointer bg-white border border-gray-200 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:border-blue-400 transform hover:-translate-y-1"
+      className="cursor-pointer group flex flex-col h-full"
     >
-      <div className="flex justify-between items-start mb-4">
-        <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase">{lesson.category}</span>
-        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${getDifficultyColor(lesson.difficulty)}`}>
-          {lesson.difficulty}
-        </span>
+      <div className="mb-6 flex items-center justify-between border-b border-black/5 pb-2">
+        <span className="text-[10px] font-mono font-bold tracking-widest text-[#999] uppercase">{lesson.category}</span>
+        <span className="text-[9px] font-mono font-bold uppercase text-[#CCC]">{lesson.difficulty}</span>
       </div>
-      <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">{lesson.title}</h3>
-      <p className="text-gray-600 text-sm leading-relaxed">{lesson.shortDescription}</p>
-      <div className="mt-6 flex items-center text-blue-600 font-semibold text-sm">
-        Start Lesson
-        <svg className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+      
+      <h3 className="text-2xl font-serif italic mb-4 text-[#121212] group-hover:text-[#2A4D69] transition-colors leading-tight">
+        {lesson.title}
+      </h3>
+      
+      <p className="text-sm text-[#666] font-normal leading-relaxed mb-8 flex-grow">
+        {lesson.shortDescription}
+      </p>
+      
+      <div className="flex items-center text-[10px] font-bold uppercase tracking-[0.3em] text-[#121212] pt-4 border-t border-black/5 group-hover:border-[#2A4D69] transition-colors">
+        Begin Inquiry
+        <svg className="ml-3 w-3 h-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
       </div>
     </div>
