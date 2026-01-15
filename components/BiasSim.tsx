@@ -1,5 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { audioService } from '../services/audioService';
+import GuidanceTooltip from './GuidanceTooltip';
 
 interface Candidate {
   id: number;
@@ -17,188 +19,134 @@ const INITIAL_CANDIDATES: Candidate[] = [
 ];
 
 interface Props {
-  step: number;
+  currentStep: number;
+  adjustment?: { parameter: string; value: number } | null;
+  onInteract?: () => void;
+  onNext?: () => void;
+  nextLabel?: string;
 }
 
-const BiasSim: React.FC<Props> = ({ step }) => {
+const BiasSim: React.FC<Props> = ({ currentStep, adjustment, onInteract, onNext, nextLabel }) => {
   const [candidates, setCandidates] = useState<Candidate[]>(INITIAL_CANDIDATES);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  
-  // Interactive parameters
-  const [genderBias, setGenderBias] = useState(0.8); // 80% Male in training
-  const [experienceWeight, setExperienceWeight] = useState(0.3); // How much the model "actually" looks at merit
+  const [genderBias, setGenderBias] = useState(0.8);
+  const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
+
+  useEffect(() => {
+    if (adjustment?.parameter === 'genderBias') {
+      setGenderBias(adjustment.value);
+      markInteraction();
+    }
+  }, [adjustment]);
+
+  useEffect(() => {
+    setCandidates(INITIAL_CANDIDATES);
+    setShowResults(false);
+    setHasActuallyInteracted(currentStep === 0);
+  }, [currentStep]);
+
+  const markInteraction = () => {
+    if (!hasActuallyInteracted) {
+      setHasActuallyInteracted(true);
+      onInteract?.();
+    }
+  };
 
   const runModel = () => {
+    audioService.play('blip');
+    markInteraction();
     setIsProcessing(true);
     setShowResults(false);
-    
     setTimeout(() => {
       setCandidates(prev => prev.map(c => {
-        // Model logic influenced by parameters
-        // The higher the genderBias, the more the model "cheats" for males
         const genderScore = c.gender === 'Male' ? (genderBias * 100) : ((1 - genderBias) * 100);
-        const finalScore = (c.experience * experienceWeight) + (genderScore * (1 - experienceWeight));
-        
+        const finalScore = (c.experience * 0.3) + (genderScore * 0.7);
         return { ...c, status: finalScore > 50 ? 'hired' : 'rejected' };
       }));
       setIsProcessing(false);
       setShowResults(true);
+      audioService.play('success');
     }, 1200);
   };
 
-  useEffect(() => {
-    // Reset if we move between steps
-    setCandidates(INITIAL_CANDIDATES);
-    setShowResults(false);
-  }, [step]);
+  const disparity = Math.abs(0.5 - genderBias) * 200;
 
-  if (step === 0) {
-    return (
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100">
-        <h4 className="text-center font-bold text-gray-800 mb-4 uppercase tracking-tight">Step 1: Configure Training Data Bias</h4>
-        
-        <div className="mb-8 space-y-6">
-          <div>
-            <div className="flex justify-between text-xs font-bold mb-2">
-              <span className="text-blue-600">Male Hires: {(genderBias * 100).toFixed(0)}%</span>
-              <span className="text-pink-500">Female Hires: {((1 - genderBias) * 100).toFixed(0)}%</span>
-            </div>
-            <input 
-              type="range" min="0" max="1" step="0.05" 
-              value={genderBias} onChange={(e) => setGenderBias(parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-10 gap-1.5 p-2 bg-gray-50 rounded-lg border border-gray-100">
-            {Array.from({ length: 100 }).map((_, i) => (
-              <div 
-                key={i} 
-                className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${i < (genderBias * 100) ? 'bg-blue-500' : 'bg-pink-400 opacity-80'}`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-          <p className="text-xs text-blue-800 leading-relaxed">
-            <b>The Situation:</b> Your historical data is skewed. In the next step, we'll see how a model trained on this "Garbage" data makes decisions.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const analysis = useMemo(() => {
+    if (disparity < 10) return { label: 'Equitable Distribution', color: 'text-emerald-600', desc: 'The training data is balanced. The model is forced to rely on merit-based features for prediction.' };
+    if (disparity < 40) return { label: 'Mild Systemic Drift', color: 'text-amber-600', desc: 'A subtle preference for one group is emerging. This can compound over time into institutional bias.' };
+    return { label: 'Systemic Disparity', color: 'text-rose-600', desc: 'The model has learned a strong proxy variable. Real merit is being overshadowed by historical prejudice.' };
+  }, [disparity]);
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 max-h-[85vh] overflow-y-auto custom-scrollbar">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
+      <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
-          <h4 className="font-bold text-gray-800 uppercase">Step 2: Prediction Results</h4>
-          <p className="text-xs text-gray-500">How did the model weigh the variables?</p>
+          <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
+          <div className={`text-2xl font-serif italic ${analysis.color} transition-colors duration-500`}>{analysis.label}</div>
         </div>
+        <div className="text-right">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Bias Index</div>
+          <div className="text-2xl font-mono font-bold tabular-nums">{disparity.toFixed(0).padStart(3, '0')}</div>
+        </div>
+      </div>
+
+      <div className="w-full mb-12">
+        {currentStep === 0 ? (
+          <div className="space-y-8">
+            <div className="relative h-24 bg-[#FDFCFB] border border-black/5 flex items-center justify-center overflow-hidden">
+               <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '10px 10px' }} />
+               <div className="flex space-x-2">{Array.from({ length: 40 }).map((_, i) => (<div key={i} className={`w-1 h-8 rotate-12 transition-colors duration-500 ${i < (genderBias * 40) ? 'bg-[#2A4D69]' : 'bg-[#E11D48]/30'}`} />))}</div>
+            </div>
+            <div className="bg-[#FDFCFB] border border-black/5 p-8">
+                <div className="flex justify-between mb-4">
+                  <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Historical Hiring Skew</label>
+                  <span className="text-[10px] font-mono font-bold text-[#121212]">{genderBias > 0.5 ? 'Male Majority' : 'Female Majority'}</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.05" value={genderBias} onChange={(e) => { setGenderBias(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {candidates.map(c => (
+              <div key={c.id} className={`p-6 border transition-all duration-500 ${c.status === 'hired' ? 'bg-[#F9F8F6] border-[#2A4D69]' : c.status === 'rejected' ? 'bg-white border-black/5 opacity-50' : 'bg-white border-black/5'}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-serif italic text-lg mb-1">{c.name}</div>
+                    <div className="font-mono text-[8px] font-bold text-[#CCC] uppercase tracking-widest">{c.gender} • EXP: {c.experience}%</div>
+                  </div>
+                  {c.status !== 'pending' && <span className={`font-mono text-[9px] font-bold uppercase tracking-widest ${c.status === 'hired' ? 'text-emerald-600' : 'text-rose-600'}`}>{c.status}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
+        <div className="space-y-6">
+          {currentStep === 1 && (<button onClick={runModel} disabled={isProcessing} className={`w-full py-4 text-[10px] font-bold uppercase tracking-[0.3em] transition-all border ${isProcessing ? 'bg-transparent border-black/10 text-[#666]' : 'bg-[#121212] border-[#121212] text-white hover:bg-[#2A4D69]'}`}>{isProcessing ? 'Auditing Model...' : 'Execute Prediction'}</button>)}
+          <div className="p-4 bg-[#F9F8F6] border border-black/5">
+            <span className="font-mono text-[8px] font-bold text-[#CCC] uppercase tracking-widest block mb-2">Merit Proxy Weight</span>
+            <div className="h-1 bg-black/5 rounded-full overflow-hidden"><div className="h-full bg-[#121212] transition-all duration-1000" style={{ width: '30%' }}></div></div>
+          </div>
+        </div>
+        <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#999] mb-3">Model Analysis</h5>
+          <p className="text-xs text-[#444] leading-relaxed italic font-normal">"{analysis.desc}"</p>
+        </div>
+      </div>
+
+      {/* NEXT STEP BUTTON AREA */}
+      <div className={`w-full p-8 border-2 border-dashed border-[#A5C9FF]/50 transition-all duration-500 bg-[#F9FBFF]/30 mt-4 ${hasActuallyInteracted ? 'opacity-100' : 'opacity-0'}`}>
         <button 
-          onClick={runModel}
-          disabled={isProcessing}
-          className="w-full md:w-auto bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 shadow-lg shadow-indigo-100 transition-all shrink-0"
+          onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+          className="w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group"
         >
-          {isProcessing ? 'Thinking...' : 'Run Prediction'}
+          {nextLabel || 'Advance Manuscript'}
+          <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
         </button>
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {candidates.map(c => (
-          <div key={c.id} className={`p-4 rounded-2xl border-2 transition-all duration-500 relative overflow-hidden ${
-            c.status === 'hired' ? 'border-green-500 bg-green-50' : 
-            c.status === 'rejected' ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
-          }`}>
-            <div className="relative z-10 flex justify-between items-start">
-              <div>
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="font-bold text-gray-900">{c.name}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
-                    c.gender === 'Male' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-                  }`}>{c.gender}</span>
-                </div>
-                <div className="text-[10px] font-bold text-gray-400">EXP: {c.experience}%</div>
-              </div>
-              <div className="text-right">
-                {c.status !== 'pending' && (
-                  <span className={`text-xs font-black uppercase px-2 py-1 rounded ${
-                    c.status === 'hired' ? 'bg-green-600 text-white' : 'bg-red-500 text-white'
-                  }`}>
-                    {c.status}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {showResults && (
-        <div className="mt-8 space-y-8 animate-in slide-in-from-top-4 duration-700">
-          <div className="p-6 bg-slate-900 rounded-2xl text-white">
-            <div className="flex justify-between items-center mb-6">
-              <h5 className="font-bold text-sm uppercase tracking-widest text-slate-400">Learned Weights</h5>
-              <div className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">Based on Training Data</div>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="text-slate-400">Gender Proxy (Historical Preference)</span>
-                  <span className="font-black text-indigo-400">{(genderBias * 100).toFixed(0)}% Importance</span>
-                </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${genderBias * 100}%` }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="text-slate-400">Actual Experience/Merit</span>
-                  <span className="font-black text-emerald-400">{(100 - (genderBias * 100)).toFixed(0)}% Importance</span>
-                </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${(1 - genderBias) * 100}%` }}></div>
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-6 text-xs text-slate-400 leading-relaxed italic border-t border-slate-800 pt-4">
-              "Because the training data was biased, the model 'learned' that being <b>{genderBias > 0.5 ? 'Male' : 'Female'}</b> is a key factor for success, often ignoring real merit."
-            </p>
-          </div>
-
-          <div className="border-t border-gray-100 pt-8">
-            <h5 className="font-bold text-gray-800 text-lg mb-4">Real-World Impact</h5>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
-                <div className="flex items-center space-x-2 mb-2 text-orange-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                  <span className="font-bold text-sm">Loan Applications</span>
-                </div>
-                <p className="text-xs text-orange-800 leading-relaxed">
-                  Automated lending systems have been found to flag minority neighborhoods as "high risk" even when applicants have strong credit scores, effectively automating historical redlining.
-                </p>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                <div className="flex items-center space-x-2 mb-2 text-purple-700">
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                   <span className="font-bold text-sm">Facial Recognition</span>
-                </div>
-                <p className="text-xs text-purple-800 leading-relaxed">
-                  Research shows that many facial recognition models perform significantly worse on women and people of color because they were trained on datasets that over-represented white men.
-                </p>
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-gray-400 italic text-center">
-              Algorithmic bias isn't just a technical glitch; it's a social responsibility.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

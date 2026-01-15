@@ -1,41 +1,116 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { audioService } from '../services/audioService';
+import GuidanceTooltip from './GuidanceTooltip';
 
-const SVMSim: React.FC = () => {
+interface Props {
+  adjustment?: { parameter: string; value: number } | null;
+  currentStep?: number;
+  onInteract?: () => void;
+  onNext?: () => void;
+  nextLabel?: string;
+}
+
+const CLUSTER_A = [
+  { x: 100, y: 100 }, { x: 140, y: 120 }, { x: 80, y: 160 }, { x: 120, y: 200 }, { x: 160, y: 80 }
+];
+const CLUSTER_B = [
+  { x: 340, y: 280 }, { x: 380, y: 320 }, { x: 420, y: 260 }, { x: 360, y: 220 }, { x: 400, y: 360 }
+];
+
+const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel }) => {
   const [slope, setSlope] = useState(1);
   const [margin, setMargin] = useState(40);
+  const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
+
+  useEffect(() => {
+    if (adjustment?.parameter === 'slope') { setSlope(adjustment.value); markInteraction(); }
+    if (adjustment?.parameter === 'margin') { setMargin(adjustment.value); markInteraction(); }
+  }, [adjustment]);
+
+  useEffect(() => {
+    setHasActuallyInteracted(currentStep === 0);
+  }, [currentStep]);
+
+  const markInteraction = () => {
+    if (!hasActuallyInteracted) {
+      setHasActuallyInteracted(true);
+      onInteract?.();
+    }
+  };
+
+  const supportVectors = useMemo(() => {
+    // Points closest to the boundary lines
+    return [...CLUSTER_A, ...CLUSTER_B].filter(p => {
+      const dist = Math.abs(p.y - (slope * (p.x - 250) + 225));
+      return Math.abs(dist - margin) < 15;
+    });
+  }, [slope, margin]);
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100">
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="font-bold text-gray-800 uppercase">Maximum Margin</h4>
-        <span className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-1 rounded">SVC Model</span>
+    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
+      <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
+        <div>
+          <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
+          <div className="text-2xl font-serif italic text-emerald-600">Maximum Margin Classifier</div>
+        </div>
+        <div className="text-right">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Support Vectors</div>
+          <div className="text-2xl font-mono font-bold tabular-nums">{supportVectors.length.toString().padStart(2, '0')}</div>
+        </div>
       </div>
 
-      <div className="relative w-full h-[300px] bg-slate-50 border border-slate-100 rounded-xl overflow-hidden mb-6">
-        {/* Support Vectors */}
-        <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-teal-500 rounded-full border-2 border-white shadow-sm" />
-        <div className="absolute bottom-1/4 right-1/4 w-4 h-4 bg-purple-500 rounded-full border-2 border-white shadow-sm" />
-
-        {/* Boundary Lines */}
+      <div className="relative w-full h-[360px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10_rgba(0,0,0,0.02)]">
         <svg className="absolute inset-0 w-full h-full">
-          <line x1="0" y1={150 - slope * 150} x2="500" y2={150 + slope * 350} stroke="#3b82f6" strokeWidth="3" />
-          <line x1="0" y1={150 - slope * 150 - margin} x2="500" y2={150 + slope * 350 - margin} stroke="#3b82f6" strokeWidth="1" strokeDasharray="4" className="opacity-40" />
-          <line x1="0" y1={150 - slope * 150 + margin} x2="500" y2={150 + slope * 350 + margin} stroke="#3b82f6" strokeWidth="1" strokeDasharray="4" className="opacity-40" />
-          {/* Shaded Margin Area */}
-          <path d={`M0,${150 - slope * 150 - margin} L500,${150 + slope * 350 - margin} L500,${150 + slope * 350 + margin} L0,${150 - slope * 150 + margin} Z`} fill="rgba(59, 130, 246, 0.05)" />
+           <defs>
+            <linearGradient id="marginGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2A4D69" stopOpacity="0.03" />
+              <stop offset="100%" stopColor="#E11D48" stopOpacity="0.03" />
+            </linearGradient>
+          </defs>
+          
+          <g transform="translate(250, 225) rotate(0)">
+             {/* Decision Boundary */}
+             <line x1="-300" y1={-300 * slope} x2="300" y2={300 * slope} stroke="#121212" strokeWidth="1" />
+             {/* Margins */}
+             <line x1="-300" y1={-300 * slope - margin} x2="300" y2={300 * slope - margin} stroke="#2A4D69" strokeWidth="0.5" strokeDasharray="4" className="opacity-40" />
+             <line x1="-300" y1={-300 * slope + margin} x2="300" y2={300 * slope + margin} stroke="#E11D48" strokeWidth="0.5" strokeDasharray="4" className="opacity-40" />
+          </g>
+
+          {CLUSTER_A.map((p, i) => (
+            <circle key={`a-${i}`} cx={p.x} cy={p.y} r="4" fill="#2A4D69" className="opacity-60" />
+          ))}
+          {CLUSTER_B.map((p, i) => (
+            <rect key={`b-${i}`} x={p.x-4} y={p.y-4} width="8" height="8" fill="#E11D48" className="opacity-60 rotate-45" />
+          ))}
+          
+          {supportVectors.map((p, i) => (
+            <circle key={`sv-${i}`} cx={p.x} cy={p.y} r="8" fill="none" stroke="#121212" strokeWidth="0.5" className="animate-pulse" />
+          ))}
         </svg>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Hyperplane Angle</label>
-          <input type="range" min="-2" max="2" step="0.1" value={slope} onChange={(e) => setSlope(parseFloat(e.target.value))} className="w-full h-2 bg-blue-100 accent-blue-600 rounded-lg appearance-none cursor-pointer" />
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
+        <div className="space-y-6">
+          <div>
+            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Boundary Slope: {slope.toFixed(2)}</label>
+            <input type="range" min="-2" max="2" step="0.1" value={slope} onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
+          </div>
+          <div>
+            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Margin Width: {margin}</label>
+            <input type="range" min="10" max="100" step="1" value={margin} onChange={(e) => { setMargin(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#E11D48]" />
+          </div>
         </div>
-        <div>
-          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Margin Width</label>
-          <input type="range" min="10" max="80" step="1" value={margin} onChange={(e) => setMargin(parseInt(e.target.value))} className="w-full h-2 bg-blue-100 accent-blue-600 rounded-lg appearance-none cursor-pointer" />
+        <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
+          <p className="text-xs text-[#444] leading-relaxed italic">"Support Vectors are the 'critical' data points. If they were removed, the position of the dividing line would shift."</p>
         </div>
+      </div>
+
+      <div className={`w-full p-8 border-2 border-dashed border-[#A5C9FF]/50 transition-all duration-500 bg-[#F9FBFF]/30 mt-4 ${hasActuallyInteracted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        <button onClick={onNext} className="w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group">
+          {nextLabel || 'Advance Manuscript'}
+          <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+        </button>
       </div>
     </div>
   );

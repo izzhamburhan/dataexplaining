@@ -1,109 +1,106 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { audioService } from '../services/audioService';
+import GuidanceTooltip from './GuidanceTooltip';
 
-const PCASim: React.FC = () => {
+interface Props {
+  adjustment?: { parameter: string; value: number } | null;
+  currentStep?: number;
+  onInteract?: () => void;
+  onNext?: () => void;
+  nextLabel?: string;
+}
+
+const POINTS = [
+  { x: 120, y: 150 }, { x: 150, y: 160 }, { x: 180, y: 190 },
+  { x: 210, y: 220 }, { x: 240, y: 230 }, { x: 270, y: 270 },
+  { x: 300, y: 290 }, { x: 330, y: 320 }, { x: 360, y: 330 },
+  { x: 200, y: 200 }, { x: 260, y: 260 }
+];
+
+const PCASim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel }) => {
   const [angle, setAngle] = useState(0);
+  const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
 
-  // Elongated cluster to make PCA more intuitive
-  const points = useMemo(() => [
-    { x: 100, y: 150 }, { x: 130, y: 160 }, { x: 160, y: 190 },
-    { x: 190, y: 220 }, { x: 220, y: 230 }, { x: 250, y: 270 },
-    { x: 280, y: 290 }, { x: 310, y: 320 }, { x: 340, y: 330 },
-    { x: 180, y: 200 }, { x: 240, y: 260 }
-  ], []);
+  useEffect(() => {
+    if (adjustment?.parameter === 'angle') { setAngle(adjustment.value); markInteraction(); }
+  }, [adjustment]);
 
-  const centerX = 225;
-  const centerY = 240;
-  const rad = angle * (Math.PI / 180);
+  useEffect(() => {
+    setHasActuallyInteracted(currentStep === 0);
+  }, [currentStep]);
+
+  const markInteraction = () => {
+    if (!hasActuallyInteracted) {
+      setHasActuallyInteracted(true);
+      onInteract?.();
+    }
+  };
+
+  const centerX = 240, centerY = 240;
+  const rad = (angle - 45) * (Math.PI / 180);
 
   const varianceData = useMemo(() => {
     let sumSqDist = 0;
-    const projected = points.map(p => {
-      const dx = p.x - centerX;
-      const dy = p.y - centerY;
-      // Projection of vector (dx, dy) onto unit vector (cos(rad), sin(rad))
+    const projected = POINTS.map(p => {
+      const dx = p.x - centerX, dy = p.y - centerY;
       const dot = dx * Math.cos(rad) + dy * Math.sin(rad);
       sumSqDist += dot * dot;
-      return { 
-        ...p, 
-        dot,
-        projX: centerX + dot * Math.cos(rad),
-        projY: centerY + dot * Math.sin(rad)
-      };
+      return { ...p, dot, projX: centerX + dot * Math.cos(rad), projY: centerY + dot * Math.sin(rad) };
     });
-    // Normalized variance for display
-    const variance = (sumSqDist / points.length) / 50; 
-    return { projected, variance };
-  }, [angle, points]);
+    const capture = Math.min(100, (sumSqDist / 35000) * 100);
+    return { projected, capture };
+  }, [rad]);
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100">
-      <div className="flex justify-between items-center mb-6">
-        <h4 className="font-bold text-gray-800 uppercase tracking-tight">Principal Components</h4>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] font-black text-blue-600 uppercase">Captured Variance</span>
-          <span className="text-xl font-black text-gray-900 tabular-nums">{(varianceData.variance * 10).toFixed(1)}%</span>
+    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
+      <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
+        <div>
+          <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
+          <div className="text-2xl font-serif italic text-emerald-600">Principal Component Analysis</div>
+        </div>
+        <div className="text-right">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Variance Capture</div>
+          <div className="text-2xl font-mono font-bold tabular-nums">{varianceData.capture.toFixed(1)}%</div>
         </div>
       </div>
-      
-      <div className="relative w-full h-[380px] bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden mb-8 shadow-inner">
-        {/* Points */}
-        {points.map((p, i) => (
-          <div 
-            key={i} 
-            className="absolute w-2.5 h-2.5 bg-gray-300 rounded-full border border-white z-0" 
-            style={{ left: p.x, top: p.y, transform: 'translate(-50%, -50%)' }} 
-          />
-        ))}
 
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          {/* Principal Axis Line */}
-          <line 
-            x1={centerX - Math.cos(rad) * 250} y1={centerY - Math.sin(rad) * 250}
-            x2={centerX + Math.cos(rad) * 250} y2={centerY + Math.sin(rad) * 250}
-            stroke="#3b82f6" strokeWidth="3" strokeLinecap="round"
-          />
+      <div className="relative w-full h-[400px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+        <svg className="absolute inset-0 w-full h-full">
+           <defs>
+            <radialGradient id="dotGrad">
+              <stop offset="0%" stopColor="#2A4D69" />
+              <stop offset="100%" stopColor="#121212" />
+            </radialGradient>
+          </defs>
           
-          {/* Projection Lines */}
+          <line x1={centerX - Math.cos(rad) * 400} y1={centerY - Math.sin(rad) * 400} x2={centerX + Math.cos(rad) * 400} y2={centerY + Math.sin(rad) * 400} stroke="#121212" strokeWidth="0.5" strokeDasharray="6" className="opacity-20" />
+          
           {varianceData.projected.map((p, i) => (
-            <React.Fragment key={i}>
-              <line 
-                x1={p.x} y1={p.y} x2={p.projX} y2={p.projY} 
-                stroke="#3b82f6" strokeWidth="1" strokeDasharray="3,3" className="opacity-40" 
-              />
-              <circle cx={p.projX} cy={p.projY} r="3.5" fill="#3b82f6" className="shadow-sm" />
-            </React.Fragment>
+            <g key={i}>
+               <line x1={p.x} y1={p.y} x2={p.projX} y2={p.projY} stroke="#CCC" strokeWidth="0.5" strokeDasharray="2" />
+               <circle cx={p.x} cy={p.y} r="3" fill="#CCC" opacity="0.5" />
+               <circle cx={p.projX} cy={p.projY} r="3" fill="#2A4D69" />
+            </g>
           ))}
         </svg>
-
-        {/* Orthogonal axis indicator */}
-        <div 
-          className="absolute w-20 h-px bg-gray-200 opacity-50 transition-transform duration-300 pointer-events-none"
-          style={{ 
-            left: centerX - 40, top: centerY, 
-            transform: `rotate(${angle + 90}deg)` 
-          }}
-        />
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <div className="flex justify-between mb-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Rotate Projection Axis</label>
-            <span className="text-xs font-black text-blue-600">{angle}°</span>
-          </div>
-          <input 
-            type="range" min="0" max="360" value={angle} 
-            onChange={(e) => setAngle(parseInt(e.target.value))} 
-            className="w-full h-2.5 bg-blue-100 accent-blue-600 rounded-lg appearance-none cursor-pointer" 
-          />
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
+        <div className="space-y-6">
+          <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Rotation Axis Angle: {angle}°</label>
+          <input type="range" min="0" max="180" value={angle} onChange={(e) => { setAngle(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
         </div>
+        <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
+          <p className="text-xs text-[#444] leading-relaxed italic">"PCA squashes 2D data into a single dimension. By rotating the axis, we find the line where the points are most spread out, preserving the most information."</p>
+        </div>
+      </div>
 
-        <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
-          <p className="text-xs text-indigo-800 leading-relaxed italic">
-            <b>PCA Goal:</b> Find the axis where the data is most "spread out". When the spread is widest, that axis captures the most information about your data!
-          </p>
-        </div>
+      <div className={`w-full p-8 border-2 border-dashed border-[#A5C9FF]/50 transition-all duration-500 bg-[#F9FBFF]/30 mt-4 ${hasActuallyInteracted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        <button onClick={onNext} className="w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group">
+          {nextLabel || 'Advance Manuscript'}
+          <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+        </button>
       </div>
     </div>
   );
