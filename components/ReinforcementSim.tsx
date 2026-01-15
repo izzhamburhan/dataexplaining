@@ -21,6 +21,7 @@ const ReinforcementSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext
   const [isTraining, setIsTraining] = useState(false);
   const [episodes, setEpisodes] = useState(0);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
+  const [rewardPop, setRewardPop] = useState<{ val: string, x: number, y: number } | null>(null);
 
   useEffect(() => {
     setHasActuallyInteracted(currentStep === 0);
@@ -61,14 +62,31 @@ const ReinforcementSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext
                 newQTable[state][actionIdx] += 0.5 * (reward + 0.9 * maxNextQ - newQTable[state][actionIdx]);
                 setQTable(newQTable);
 
-                if (isGoal) { audioService.play('success'); setEpisodes(e => e + 1); markInteraction(); return { x: 0, y: 0 }; }
-                if (isWall) { audioService.play('failure'); return prev; }
+                if (isGoal) { 
+                    audioService.play('success'); 
+                    setEpisodes(e => e + 1); 
+                    markInteraction(); 
+                    setRewardPop({ val: '+100', x: 4, y: 4 });
+                    return { x: 0, y: 0 }; 
+                }
+                if (isWall) { 
+                    audioService.play('failure'); 
+                    setRewardPop({ val: '-100', x: nextX, y: nextY });
+                    return prev; 
+                }
                 return { x: nextX, y: nextY };
             });
         }, 80);
     }
     return () => clearInterval(interval);
   }, [isTraining, qTable]);
+
+  useEffect(() => {
+    if (rewardPop) {
+      const timer = setTimeout(() => setRewardPop(null), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [rewardPop]);
 
   const learningScore = useMemo(() => {
     return Math.min(100, (episodes / 20) * 100);
@@ -79,40 +97,58 @@ const ReinforcementSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
-          <div className="text-2xl font-serif italic text-emerald-600">Policy Iteration Strategy</div>
+          <div className="text-2xl font-serif italic text-emerald-600">State-Value Policy Analysis</div>
         </div>
         <div className="text-right">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Intelligence Level</div>
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Policy Stability</div>
           <div className="text-2xl font-mono font-bold tabular-nums">{learningScore.toFixed(0)}%</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-1 p-1 bg-[#FDFCFB] border border-black/5 relative mb-12 w-full h-[360px]">
+      <div className="grid grid-cols-5 gap-1 p-1 bg-[#FDFCFB] border border-black/5 relative mb-12 w-full h-[380px]">
         {Array.from({ length: 25 }).map((_, i) => {
             const x = i % 5, y = Math.floor(i / 5);
             const isWall = WALLS.some(w => w.x === x && w.y === y);
             const isGoal = x === 4 && y === 4;
             const qVal = Math.max(...qTable[i]);
             return (
-                <div key={i} className={`relative flex items-center justify-center transition-all ${isWall ? 'bg-[#121212]' : isGoal ? 'bg-emerald-50' : 'bg-white border-[0.5px] border-black/5'}`} style={{ backgroundColor: !isWall && !isGoal ? `rgba(42, 77, 105, ${Math.min(0.4, qVal / 100)})` : undefined }}>
-                    {isGoal && <span className="font-mono text-[10px] text-emerald-600 font-bold animate-pulse">GOAL</span>}
+                <div key={i} className={`relative flex flex-col items-center justify-center transition-all ${isWall ? 'bg-[#121212]' : isGoal ? 'bg-emerald-50' : 'bg-white border-[0.5px] border-black/5'}`} style={{ backgroundColor: !isWall && !isGoal ? `rgba(42, 77, 105, ${Math.min(0.6, qVal / 100)})` : undefined }}>
+                    {!isWall && !isGoal && qVal > 1 && (
+                      <span className="font-mono text-[6px] text-[#2A4D69] opacity-40 font-bold">{qVal.toFixed(0)}</span>
+                    )}
+                    {isGoal && <span className="font-mono text-[8px] text-emerald-600 font-bold animate-pulse">REWARD</span>}
+                    {isWall && <span className="font-mono text-[8px] text-white/20 font-bold">WALL</span>}
                 </div>
             );
         })}
+        
+        {/* Agent Icon */}
         <div className="absolute w-1/5 h-1/5 flex items-center justify-center transition-all duration-100 pointer-events-none" style={{ left: agentPos.x * 20 + '%', top: agentPos.y * 20 + '%' }}>
-            <div className="w-6 h-6 bg-[#2A4D69] rotate-45 border-2 border-white shadow-lg" />
+            <div className="w-8 h-8 bg-[#121212] rotate-45 border-2 border-white shadow-lg flex items-center justify-center">
+               <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+            </div>
         </div>
+
+        {/* Reward Feedback Pop */}
+        {rewardPop && (
+          <div className="absolute w-1/5 h-1/5 flex items-center justify-center pointer-events-none animate-out fade-out slide-out-to-top-8 duration-1000" style={{ left: rewardPop.x * 20 + '%', top: rewardPop.y * 20 + '%' }}>
+             <span className={`text-xl font-mono font-bold ${rewardPop.val.includes('+') ? 'text-emerald-600' : 'text-rose-600'}`}>
+               {rewardPop.val}
+             </span>
+          </div>
+        )}
       </div>
 
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
         <div className="space-y-6">
-           <button onClick={() => { setIsTraining(!isTraining); audioService.play('blip'); markInteraction(); }} className={`w-full py-4 text-[10px] font-bold uppercase tracking-[0.3em] transition-all border ${isTraining ? 'bg-transparent border-black/10 text-[#666]' : 'bg-[#121212] border-[#121212] text-white hover:bg-[#2A4D69]'}`}>
-            {isTraining ? 'Pause Training Loop' : 'Initiate Training Sequence'}
+           <button onClick={() => { setIsTraining(!isTraining); audioService.play('blip'); markInteraction(); }} className={`w-full py-5 text-[10px] font-bold uppercase tracking-[0.3em] transition-all border ${isTraining ? 'bg-transparent border-black/10 text-[#666]' : 'bg-[#121212] border-[#121212] text-white hover:bg-[#2A4D69]'}`}>
+            {isTraining ? 'Halt Training Loop' : 'Execute Policy Iteration'}
            </button>
-           <button onClick={() => { setQTable(Array.from({ length: 25 }, () => [0,0,0,0])); setEpisodes(0); setAgentPos({x:0,y:0}); }} className="w-full py-2 text-[8px] font-mono text-[#CCC] hover:text-[#121212] uppercase tracking-widest">Wipe Q-Memory</button>
+           <button onClick={() => { setQTable(Array.from({ length: 25 }, () => [0,0,0,0])); setEpisodes(0); setAgentPos({x:0,y:0}); }} className="w-full py-2 text-[8px] font-mono text-[#CCC] hover:text-[#121212] uppercase tracking-widest border-b border-transparent hover:border-black/5 transition-all">Reset Memory Banks</button>
         </div>
         <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-          <p className="text-xs text-[#444] leading-relaxed italic">"The darker cells represent higher 'Value'. As the agent discovers the goal repeatedly, it updates its Q-Table with a path of maximum cumulative reward."</p>
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#999] mb-3">Model Analysis</h5>
+          <p className="text-xs text-[#444] leading-relaxed italic">"The agent starts with zero knowledge. Every $+100$ reward from the goal 'bleeds' back into previous states. Eventually, the agent follows the trail of high Q-values like a scent to the goal."</p>
         </div>
       </div>
 

@@ -40,11 +40,18 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
   };
 
   const supportVectors = useMemo(() => {
-    // Points closest to the boundary lines
     return [...CLUSTER_A, ...CLUSTER_B].filter(p => {
       const dist = Math.abs(p.y - (slope * (p.x - 250) + 225));
-      return Math.abs(dist - margin) < 15;
+      return Math.abs(dist - margin) < 18;
     });
+  }, [slope, margin]);
+
+  const marginQuality = useMemo(() => {
+    const isOverlapping = [...CLUSTER_A, ...CLUSTER_B].some(p => {
+        const dist = Math.abs(p.y - (slope * (p.x - 250) + 225));
+        return dist < margin - 5;
+    });
+    return isOverlapping ? 'Compromised' : 'Optimal';
   }, [slope, margin]);
 
   return (
@@ -52,7 +59,7 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
-          <div className="text-2xl font-serif italic text-emerald-600">Maximum Margin Classifier</div>
+          <div className={`text-2xl font-serif italic ${marginQuality === 'Optimal' ? 'text-emerald-600' : 'text-rose-600'} transition-colors duration-500`}>{marginQuality} Separation</div>
         </div>
         <div className="text-right">
           <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Support Vectors</div>
@@ -60,32 +67,39 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
         </div>
       </div>
 
-      <div className="relative w-full h-[360px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10_rgba(0,0,0,0.02)]">
+      <div className="relative w-full h-[380px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10_rgba(0,0,0,0.02)]">
         <svg className="absolute inset-0 w-full h-full">
            <defs>
-            <linearGradient id="marginGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#2A4D69" stopOpacity="0.03" />
-              <stop offset="100%" stopColor="#E11D48" stopOpacity="0.03" />
-            </linearGradient>
+            <pattern id="marginPattern" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="10" stroke="#121212" strokeWidth="0.5" opacity="0.05" />
+            </pattern>
           </defs>
           
-          <g transform="translate(250, 225) rotate(0)">
+          <g transform="translate(250, 225)">
+             {/* Margin Fill Zone */}
+             <rect 
+               x="-300" y={-margin} width="600" height={margin * 2} 
+               fill="url(#marginPattern)" 
+               transform={`skewY(${Math.atan(slope) * (180/Math.PI)})`}
+               className="transition-all duration-300"
+             />
+
              {/* Decision Boundary */}
-             <line x1="-300" y1={-300 * slope} x2="300" y2={300 * slope} stroke="#121212" strokeWidth="1" />
+             <line x1="-300" y1={-300 * slope} x2="300" y2={300 * slope} stroke="#121212" strokeWidth="1.5" />
              {/* Margins */}
              <line x1="-300" y1={-300 * slope - margin} x2="300" y2={300 * slope - margin} stroke="#2A4D69" strokeWidth="0.5" strokeDasharray="4" className="opacity-40" />
              <line x1="-300" y1={-300 * slope + margin} x2="300" y2={300 * slope + margin} stroke="#E11D48" strokeWidth="0.5" strokeDasharray="4" className="opacity-40" />
           </g>
 
           {CLUSTER_A.map((p, i) => (
-            <circle key={`a-${i}`} cx={p.x} cy={p.y} r="4" fill="#2A4D69" className="opacity-60" />
+            <circle key={`a-${i}`} cx={p.x} cy={p.y} r="4" fill="#2A4D69" className="opacity-80" />
           ))}
           {CLUSTER_B.map((p, i) => (
-            <rect key={`b-${i}`} x={p.x-4} y={p.y-4} width="8" height="8" fill="#E11D48" className="opacity-60 rotate-45" />
+            <rect key={`b-${i}`} x={p.x-4} y={p.y-4} width="8" height="8" fill="#E11D48" className="opacity-80 rotate-45" />
           ))}
           
           {supportVectors.map((p, i) => (
-            <circle key={`sv-${i}`} cx={p.x} cy={p.y} r="8" fill="none" stroke="#121212" strokeWidth="0.5" className="animate-pulse" />
+            <circle key={`sv-${i}`} cx={p.x} cy={p.y} r="10" fill="none" stroke="#121212" strokeWidth="0.5" className="animate-pulse" />
           ))}
         </svg>
       </div>
@@ -93,16 +107,16 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
         <div className="space-y-6">
           <div>
-            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Boundary Slope: {slope.toFixed(2)}</label>
-            <input type="range" min="-2" max="2" step="0.1" value={slope} onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
+            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Boundary Orientation: {slope.toFixed(2)}</label>
+            <input type="range" min="-2.5" max="2.5" step="0.1" value={slope} onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
           </div>
           <div>
-            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Margin Width: {margin}</label>
+            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Margin Magnitude: {margin}</label>
             <input type="range" min="10" max="100" step="1" value={margin} onChange={(e) => { setMargin(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#E11D48]" />
           </div>
         </div>
         <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-          <p className="text-xs text-[#444] leading-relaxed italic">"Support Vectors are the 'critical' data points. If they were removed, the position of the dividing line would shift."</p>
+          <p className="text-xs text-[#444] leading-relaxed italic">"The model is 'robust' when the street (margin) is wide and empty. Support vectors act as the anchors for this street—move them, and the whole model pivots."</p>
         </div>
       </div>
 

@@ -44,11 +44,13 @@ const PCASim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
     let sumSqDist = 0;
     const projected = POINTS.map(p => {
       const dx = p.x - centerX, dy = p.y - centerY;
+      // Project dx, dy onto vector defined by rad
       const dot = dx * Math.cos(rad) + dy * Math.sin(rad);
       sumSqDist += dot * dot;
       return { ...p, dot, projX: centerX + dot * Math.cos(rad), projY: centerY + dot * Math.sin(rad) };
     });
-    const capture = Math.min(100, (sumSqDist / 35000) * 100);
+    // Normalized variance capture for visualization
+    const capture = Math.min(100, (sumSqDist / 38000) * 100);
     return { projected, capture };
   }, [rad]);
 
@@ -65,34 +67,42 @@ const PCASim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
         </div>
       </div>
 
-      <div className="relative w-full h-[400px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+      <div className="relative w-full h-[380px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-6 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
         <svg className="absolute inset-0 w-full h-full">
-           <defs>
-            <radialGradient id="dotGrad">
-              <stop offset="0%" stopColor="#2A4D69" />
-              <stop offset="100%" stopColor="#121212" />
-            </radialGradient>
-          </defs>
-          
-          <line x1={centerX - Math.cos(rad) * 400} y1={centerY - Math.sin(rad) * 400} x2={centerX + Math.cos(rad) * 400} y2={centerY + Math.sin(rad) * 400} stroke="#121212" strokeWidth="0.5" strokeDasharray="6" className="opacity-20" />
+          <line x1={centerX - Math.cos(rad) * 400} y1={centerY - Math.sin(rad) * 400} x2={centerX + Math.cos(rad) * 400} y2={centerY + Math.sin(rad) * 400} stroke="#121212" strokeWidth="0.5" strokeDasharray="6" className="opacity-20 transition-all duration-300" />
           
           {varianceData.projected.map((p, i) => (
-            <g key={i}>
+            <g key={i} className="transition-all duration-300">
                <line x1={p.x} y1={p.y} x2={p.projX} y2={p.projY} stroke="#CCC" strokeWidth="0.5" strokeDasharray="2" />
-               <circle cx={p.x} cy={p.y} r="3" fill="#CCC" opacity="0.5" />
-               <circle cx={p.projX} cy={p.projY} r="3" fill="#2A4D69" />
+               <circle cx={p.x} cy={p.y} r="3" fill="#CCC" opacity="0.4" />
+               <circle cx={p.projX} cy={p.projY} r="3" fill="#2A4D69" className="transition-all duration-300" />
             </g>
           ))}
         </svg>
       </div>
 
+      {/* 1D Projection Strip */}
+      <div className="w-full h-12 bg-[#F9F8F6] border border-black/5 relative flex items-center mb-12 overflow-hidden shadow-inner px-12">
+        <div className="absolute inset-y-0 left-0 w-12 bg-white/50 z-10 flex items-center justify-center font-mono text-[8px] text-[#CCC] uppercase rotate-[-90deg]">1D MAP</div>
+        <div className="w-full h-px bg-black/10 absolute left-12 right-12 top-1/2"></div>
+        <div className="relative w-full h-full">
+          {varianceData.projected.map((p, i) => (
+            <div 
+              key={`proj-${i}`} 
+              className="absolute w-1.5 h-4 bg-[#2A4D69] transition-all duration-300 border border-white/50" 
+              style={{ left: `${50 + (p.dot / 250) * 50}%`, top: '50%', transform: 'translate(-50%, -50%)' }} 
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
         <div className="space-y-6">
-          <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Rotation Axis Angle: {angle}°</label>
+          <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Principal Axis Rotation: {angle}°</label>
           <input type="range" min="0" max="180" value={angle} onChange={(e) => { setAngle(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
         </div>
         <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-          <p className="text-xs text-[#444] leading-relaxed italic">"PCA squashes 2D data into a single dimension. By rotating the axis, we find the line where the points are most spread out, preserving the most information."</p>
+          <p className="text-xs text-[#444] leading-relaxed italic">"Watch the '1D MAP' above. The goal is to rotate the axis until the projected points are spread as far as possible. This configuration 'preserves' the maximum amount of variation in the dataset."</p>
         </div>
       </div>
 
