@@ -26,3 +26,11 @@ export interface DataPoint {
   x: number;
   y: number;
 }
+
+export interface UserContext {
+  role: string;
+  industry: string;
+  skillLevel: string;
+  goals: string;
+  constraints: string;
+}
