@@ -47,6 +47,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     setHasInteracted(false);
+    
+    // CRITICAL: Clear AI explanation data whenever the lesson context or step changes.
+    setAiData(null);
+    setShowAiHelper(false);
+
     if (currentStep === 0) {
       const timer = setTimeout(() => setHasInteracted(true), 1500);
       return () => clearTimeout(timer);
@@ -70,7 +75,6 @@ const App: React.FC = () => {
     audioService.play('click');
     if (activeLesson && currentStep < activeLesson.steps.length - 1) {
       setCurrentStep(currentStep + 1);
-      setAiData(null);
       setActiveAdjustment(null);
     } else {
       setActiveLesson(null);
