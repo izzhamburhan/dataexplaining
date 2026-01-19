@@ -44,22 +44,27 @@ const PCASim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
     let sumSqDist = 0;
     const projected = POINTS.map(p => {
       const dx = p.x - centerX, dy = p.y - centerY;
-      // Project dx, dy onto vector defined by rad
       const dot = dx * Math.cos(rad) + dy * Math.sin(rad);
       sumSqDist += dot * dot;
       return { ...p, dot, projX: centerX + dot * Math.cos(rad), projY: centerY + dot * Math.sin(rad) };
     });
-    // Normalized variance capture for visualization
     const capture = Math.min(100, (sumSqDist / 38000) * 100);
     return { projected, capture };
   }, [rad]);
+
+  const analysis = useMemo(() => {
+    const cap = varianceData.capture;
+    if (cap > 90) return { label: 'Principal Feature Locked', color: 'text-emerald-600', desc: 'The axis is perfectly aligned with the data\'s maximum variance.' };
+    if (cap > 50) return { label: 'Information Drift', color: 'text-amber-600', desc: 'The axis captures some structure, but significant variance is still being ignored.' };
+    return { label: 'Inefficient Projection', color: 'text-rose-600', desc: 'The current axis ignores the primary direction of the data spread.' };
+  }, [varianceData.capture]);
 
   return (
     <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
-          <div className="text-2xl font-serif italic text-emerald-600">Principal Component Analysis</div>
+          <div className={`text-2xl font-serif italic ${analysis.color} transition-colors duration-500`}>{analysis.label}</div>
         </div>
         <div className="text-right">
           <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Variance Capture</div>
@@ -81,7 +86,6 @@ const PCASim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
         </svg>
       </div>
 
-      {/* 1D Projection Strip */}
       <div className="w-full h-12 bg-[#F9F8F6] border border-black/5 relative flex items-center mb-12 overflow-hidden shadow-inner px-12">
         <div className="absolute inset-y-0 left-0 w-12 bg-white/50 z-10 flex items-center justify-center font-mono text-[8px] text-[#CCC] uppercase rotate-[-90deg]">1D MAP</div>
         <div className="w-full h-px bg-black/10 absolute left-12 right-12 top-1/2"></div>
@@ -102,7 +106,7 @@ const PCASim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
           <input type="range" min="0" max="180" value={angle} onChange={(e) => { setAngle(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
         </div>
         <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-          <p className="text-xs text-[#444] leading-relaxed italic">"Watch the '1D MAP' above. The goal is to rotate the axis until the projected points are spread as far as possible. This configuration 'preserves' the maximum amount of variation in the dataset."</p>
+          <p className="text-xs text-[#444] leading-relaxed italic">"{analysis.desc}"</p>
         </div>
       </div>
 

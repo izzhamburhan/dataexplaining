@@ -18,6 +18,7 @@ import RandomForestSim from './components/RandomForestSim';
 import CNNSim from './components/CNNSim';
 import ReinforcementSim from './components/ReinforcementSim';
 import AiChatbot from './components/AiChatbot';
+import ImageGenerator from './components/ImageGenerator';
 import { getGeminiExplanation } from './services/geminiService';
 import { audioService } from './services/audioService';
 
@@ -249,6 +250,8 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {activeLesson && <ImageGenerator modelName={activeLesson.title} />}
               </div>
             </div>
 

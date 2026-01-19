@@ -1,23 +1,21 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { audioService } from '../services/audioService';
-import GuidanceTooltip from './GuidanceTooltip';
 
-const TRUE_POINTS = Array.from({ length: 40 }, (_, i) => {
-  const x = (i / 39) * 10;
-  const y = Math.sin(x) * 100 + 200;
-  return { x, y };
-});
+// Fixed "Truth" function - The underlying pattern the model SHOULD find
+const truthFn = (x: number) => Math.sin(x * 0.8) * 80 + 150;
 
-const TRAIN_POINTS = TRUE_POINTS.map(p => ({
-  x: p.x,
-  y: p.y + (Math.random() - 0.5) * 80 
-})).filter((_, i) => i % 2 === 0);
+// Generate data once
+const DATA_X = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const TRAIN_POINTS = DATA_X.map((x, i) => ({
+  x,
+  y: truthFn(x) + (i % 2 === 0 ? 40 : -40) // Deterministic "noise" for clarity
+}));
 
-const TEST_POINTS = TRUE_POINTS.map(p => ({
-  x: p.x,
-  y: p.y + (Math.random() - 0.5) * 80 
-})).filter((_, i) => i % 2 !== 0);
+const TEST_POINTS = [1.5, 3.5, 5.5, 7.5].map(x => ({
+  x,
+  y: truthFn(x) + (Math.random() - 0.5) * 15 // Test data is close to truth
+}));
 
 interface Props {
   adjustment?: { parameter: string; value: number } | null;
@@ -32,7 +30,10 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
 
   useEffect(() => {
-    if (adjustment?.parameter === 'complexity') { setComplexity(Math.round(adjustment.value)); markInteraction(); }
+    if (adjustment?.parameter === 'complexity') {
+      setComplexity(Math.round(adjustment.value));
+      markInteraction();
+    }
   }, [adjustment]);
 
   useEffect(() => {
@@ -46,26 +47,53 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
     }
   };
 
+  // Complex path calculation to make the "trap" visible
   const modelPath = useMemo(() => {
     const points = [];
-    for (let x = 0; x <= 10; x += 0.2) {
-      let y = Math.sin(x) * 100 + 200;
-      if (complexity === 1) y = 200 - (x - 5) * 15; 
-      else if (complexity > 5) {
-        y += Math.sin(x * complexity * 0.8) * (complexity * 12);
+    const resolution = 120;
+    
+    for (let i = 0; i <= resolution; i++) {
+      const x = (i / resolution) * 10;
+      let y = 0;
+      
+      if (complexity <= 3) {
+        // Underfit: Just a straight line
+        const slope = (complexity - 1) * 5;
+        y = 150 + (x - 5) * slope;
+      } else if (complexity <= 7) {
+        // Balanced: Approaching truth
+        const blend = (complexity - 3) / 4;
+        const linear = 150 + (x - 5) * 10;
+        y = (1 - blend) * linear + blend * truthFn(x);
+      } else {
+        // Overfit: High frequency oscillations + snapping to training points
+        const base = truthFn(x);
+        const overfitFactor = (complexity - 7) / 8; // 0 to 1
+        
+        // Add a "wobble"
+        let wobble = Math.sin(x * complexity * 1.2) * (overfitFactor * 60);
+        
+        // Force the line to touch training points more precisely as complexity increases
+        let pull = 0;
+        TRAIN_POINTS.forEach(p => {
+          const dist = Math.abs(x - p.x);
+          if (dist < 0.8) {
+            const influence = Math.pow(1 - dist / 0.8, 4) * overfitFactor;
+            pull += (p.y - (base + wobble)) * influence;
+          }
+        });
+        
+        y = base + wobble + pull;
       }
-      points.push(`${(x / 10) * 100}% ${y / 4}%`);
+      points.push(`${(x / 10) * 100}% ${y / 3}%`);
     }
     return points.join(', ');
   }, [complexity]);
 
-  const trainLoss = Math.max(2, 55 - complexity * 5.5);
-  const valLoss = complexity < 6 ? 60 - complexity * 6 : 25 + Math.pow(complexity - 6, 1.8) * 3;
-
   const analysis = useMemo(() => {
-    if (complexity < 3) return { label: 'High Bias (Underfit)', color: 'text-amber-600', desc: 'The model is too rigid to see the underlying pattern.' };
-    if (complexity <= 6) return { label: 'Optimal Generalization', color: 'text-emerald-600', desc: 'The model captures the trend without memorizing the noise.' };
-    return { label: 'High Variance (Overfit)', color: 'text-rose-600', desc: 'The model is hallucinating patterns in random noise.' };
+    if (complexity < 4) return { label: 'UNDERFITTING', color: 'text-amber-600', desc: 'The model is too simple. It ignores the curves and fails to capture even basic trends.', accent: '#D97706' };
+    if (complexity <= 7) return { label: 'OPTIMAL FIT', color: 'text-emerald-600', desc: 'Balanced. The model captures the general flow of the data while ignoring individual outliers.', accent: '#059669' };
+    return { label: 'OVERFITTING', color: 'text-rose-600', desc: 'The model is "memorizing" noise. It zig-zags wildly to hit every training point, losing sight of the true pattern.', accent: '#E11D48' };
   }, [complexity]);
 
   return (
@@ -73,62 +101,105 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
-          <div className={`text-2xl font-serif italic ${analysis.color} transition-colors duration-500`}>{analysis.label}</div>
+          <div className={`text-3xl font-serif italic ${analysis.color} transition-colors duration-500`}>{analysis.label}</div>
         </div>
         <div className="text-right">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Complexity Index</div>
-          <div className="text-2xl font-mono font-bold tabular-nums">P{complexity}</div>
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Complexity Level</div>
+          <div className="text-3xl font-mono font-bold tabular-nums">P{complexity}</div>
         </div>
       </div>
 
-      <div className="relative w-full h-[320px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-8 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          <polyline points={modelPath} fill="none" stroke="#2A4D69" strokeWidth="2.5" strokeLinecap="round" className="transition-all duration-500" />
+      <div className="relative w-full h-[360px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_20px_rgba(0,0,0,0.03)]">
+        {/* Background Grid */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+          {/* 1. The Underlying Truth (The Ghost Line) */}
+          <path 
+            d={Array.from({length: 40}).map((_, i) => {
+              const x = (i/39)*10;
+              return `${i===0?'M':'L'} ${(x/10)*100}% ${truthFn(x)/3}%`;
+            }).join(' ')}
+            fill="none" stroke="#CCC" strokeWidth="1" strokeDasharray="6,4" className="opacity-30"
+          />
+
+          {/* 2. The Model's Prediction (The Moving Line) */}
+          <polyline 
+            points={modelPath} 
+            fill="none" 
+            stroke={analysis.accent} 
+            strokeWidth={complexity > 7 ? "2" : "4"} 
+            className="transition-all duration-300 drop-shadow-sm" 
+          />
         </svg>
-        {TRAIN_POINTS.map((p, i) => (
-           <div key={`tr-${i}`} className="absolute w-2 h-2 bg-[#121212] rotate-45" style={{ left: `${(p.x / 10) * 100}%`, top: `${p.y / 4}%`, transform: 'translate(-50%, -50%) rotate(45deg)' }} />
-        ))}
-        {TEST_POINTS.map((p, i) => (
-           <div key={`ts-${i}`} className="absolute w-1.5 h-1.5 border border-[#121212] rounded-full opacity-30" style={{ left: `${(p.x / 10) * 100}%`, top: `${p.y / 4}%`, transform: 'translate(-50%, -50%)' }} />
-        ))}
-      </div>
 
-      {/* Loss Curves Plot */}
-      <div className="w-full h-24 flex items-end justify-between space-x-1 mb-12 border-b border-l border-black/5 p-4 bg-[#F9F8F6]/30">
-        <div className="absolute -left-2 top-0 bottom-0 flex flex-col justify-between py-4 pointer-events-none">
-           <span className="font-mono text-[6px] text-[#CCC] rotate-[-90deg]">LOSS</span>
-        </div>
-        <div className="w-full h-full relative">
-           <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 15 100">
-             {/* Train Loss Path */}
-             <path d={Array.from({length: 16}).map((_, i) => `${i},${100 - (Math.max(2, 55 - i * 5.5))}`).join(' L ').replace(/^0/, 'M 0')} fill="none" stroke="#121212" strokeWidth="1" strokeDasharray="2,1" opacity="0.2" />
-             {/* Val Loss Path */}
-             <path d={Array.from({length: 16}).map((_, i) => `${i},${100 - (i < 6 ? 60 - i * 6 : 25 + Math.pow(i - 6, 1.8) * 3)}`).join(' L ').replace(/^0/, 'M 0')} fill="none" stroke="#E11D48" strokeWidth="1.5" className="transition-all duration-500" />
-             {/* Current Position Marker */}
-             <circle cx={complexity} cy={100 - valLoss} r="2" fill="#E11D48" className="transition-all duration-500" />
-           </svg>
+        {/* 3. Training Data Points (Noisy Diamonds) */}
+        {TRAIN_POINTS.map((p, i) => (
+           <div key={`tr-${i}`} className="absolute w-3.5 h-3.5 bg-[#121212] rotate-45 z-20 shadow-md flex items-center justify-center" style={{ left: `${(p.x / 10) * 100}%`, top: `${p.y / 3}%`, transform: 'translate(-50%, -50%) rotate(45deg)' }}>
+             <div className="w-1.5 h-1.5 bg-white/20"></div>
+           </div>
+        ))}
+
+        {/* 4. Test Data Points (Unseen Reality) */}
+        {TEST_POINTS.map((p, i) => (
+           <div key={`ts-${i}`} className="absolute w-2.5 h-2.5 border-2 border-[#CCC] rounded-full z-10 bg-white" style={{ left: `${(p.x / 10) * 100}%`, top: `${p.y / 3}%`, transform: 'translate(-50%, -50%)' }} />
+        ))}
+
+        {/* Real-time Legend Overlay */}
+        <div className="absolute top-4 right-4 flex flex-col items-end space-y-2 bg-white/80 backdrop-blur-sm p-4 border border-black/5">
+           <div className="flex items-center space-x-3">
+              <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">Training Data (Input)</span>
+              <div className="w-2.5 h-2.5 bg-[#121212] rotate-45"></div>
+           </div>
+           <div className="flex items-center space-x-3">
+              <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">Test Data (Reality)</span>
+              <div className="w-2.5 h-2.5 border-2 border-[#CCC] rounded-full"></div>
+           </div>
+           <div className="flex items-center space-x-3">
+              <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">True Pattern</span>
+              <div className="w-4 h-[1px] border-b border-dashed border-[#CCC]"></div>
+           </div>
+           <div className="flex items-center space-x-3">
+              <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">Model Guess</span>
+              <div className="w-4 h-1 transition-colors duration-500" style={{ backgroundColor: analysis.accent }}></div>
+           </div>
         </div>
       </div>
 
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
-        <div className="space-y-8">
+        <div className="space-y-10">
           <div>
-            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest block mb-4">Polynomial Complexity: {complexity}</label>
-            <input type="range" min="1" max="15" step="1" value={complexity} onChange={(e) => { setComplexity(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 appearance-none cursor-pointer accent-[#2A4D69]" />
+            <div className="flex justify-between mb-4">
+               <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-[0.2em] block">Degrees of Freedom (Polynomial Complexity)</label>
+               <span className={`text-[10px] font-mono font-bold px-3 py-1 border border-black/5 rounded ${analysis.color} bg-[#F9F8F6]`}>{complexity === 1 ? 'Linear' : complexity < 8 ? 'Quadratic' : 'High Degree'}</span>
+            </div>
+            <input 
+              type="range" min="1" max="15" step="1" value={complexity} 
+              onChange={(e) => { setComplexity(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} 
+              className="w-full h-1 bg-black/5 appearance-none cursor-pointer accent-[#2A4D69] hover:accent-[#E11D48] transition-colors" 
+            />
           </div>
-          <div className="flex space-x-8">
-             <div>
-                <span className="block font-mono text-[8px] font-bold text-[#CCC] uppercase mb-1">Training Loss</span>
-                <span className="text-xl font-mono font-bold tabular-nums">{trainLoss.toFixed(1)}</span>
+          <div className="flex items-center justify-between p-4 bg-[#F9F8F6] border border-black/5">
+             <div className="flex flex-col">
+                <span className="font-mono text-[8px] text-[#AAA] uppercase tracking-widest mb-1">Generalization Score</span>
+                <div className="flex space-x-1">
+                   {Array.from({length: 10}).map((_, i) => {
+                     const threshold = complexity < 4 ? 3 : complexity < 8 ? 9 : 2;
+                     return <div key={i} className={`w-3 h-3 ${i < threshold ? 'bg-emerald-500' : 'bg-black/5'}`} />
+                   })}
+                </div>
              </div>
-             <div>
-                <span className="block font-mono text-[8px] font-bold text-[#CCC] uppercase mb-1">Validation Loss</span>
-                <span className={`text-xl font-mono font-bold tabular-nums ${complexity > 6 ? 'text-rose-600' : ''}`}>{valLoss.toFixed(1)}</span>
+             <div className="text-right">
+                <span className="font-mono text-[8px] text-[#AAA] uppercase tracking-widest block mb-1">Status</span>
+                <span className={`font-mono text-[10px] font-bold ${analysis.color}`}>{complexity < 4 ? 'LOW' : complexity < 8 ? 'HIGH' : 'FAILED'}</span>
              </div>
           </div>
         </div>
-        <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-          <p className="text-xs text-[#444] leading-relaxed italic">"Notice the red curve in the small plot. As complexity increases, training error drops, but the validation error eventually begins to skyrocket. This is the Overfitting Trap."</p>
+        <div className="bg-[#F9F8F6] p-8 border-l-4 transition-colors duration-500" style={{ borderColor: analysis.accent }}>
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#999] mb-4">Model intuition</h5>
+          <p className="text-sm text-[#444] leading-relaxed italic font-serif">
+            "{analysis.desc}"
+          </p>
         </div>
       </div>
 

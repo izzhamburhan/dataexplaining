@@ -67,16 +67,21 @@ const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, n
 
   const analysis = useMemo(() => {
     const inertia = results.inertia;
-    if (inertia < 2500) return { label: 'Optimal Grouping', color: 'text-emerald-600', desc: 'Centroids are well-positioned. The "Inertia" (sum of squared distances) is minimized, indicating tight clusters.' };
-    if (inertia < 5000) return { label: 'Coarse Separation', color: 'text-amber-600', desc: 'The centroids capture the general groups, but some points are far from their centers. Try repositioning centroids.' };
+    const avgDist = inertia / POINTS.length;
+    
+    if (avgDist < 50) return { label: 'Optimal Grouping', color: 'text-emerald-600', desc: 'Centroids are well-positioned. The "Inertia" (sum of squared distances) is minimized, indicating tight clusters.' };
+    if (avgDist < 90) return { label: 'Coarse Separation', color: 'text-amber-600', desc: 'The centroids capture the general groups, but some points are far from their centers. Try repositioning centroids.' };
     return { label: 'High Cluster Variance', color: 'text-rose-600', desc: 'Clusters are poorly defined. The model is failing to identify distinct groups within the data manifold.' };
   }, [results.inertia]);
 
   const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = ('touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX) - rect.left;
-    const y = ('touches' in e ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY) - rect.top;
+    const clientX = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
+    
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     
     const boundedX = Math.max(20, Math.min(x, rect.width - 20));
     const boundedY = Math.max(20, Math.min(y, rect.height - 20));
@@ -113,7 +118,17 @@ const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, n
           <div key={p.id} className="absolute w-2 h-2 rotate-45 transition-all duration-500 border border-white/50 shadow-sm z-10" style={{ left: p.x, top: p.y, transform: 'translate(-50%, -50%) rotate(45deg)', backgroundColor: COLORS[p.clusterIdx] }} />
         ))}
         {activeCentroids.map((c, i) => (
-          <div key={`centroid-${i}`} onMouseDown={(e) => { audioService.play('click'); markInteraction(); const move = (me: MouseEvent) => handleDrag(me as any, i); const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); }; window.addEventListener('mousemove', move); window.addEventListener('mouseup', up); }} className="absolute w-10 h-10 bg-white border-2 rounded shadow-xl z-20 flex items-center justify-center cursor-move transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 active:scale-95 transition-all" style={{ left: c.x, top: c.y, borderColor: COLORS[i] }}>
+          <div key={`centroid-${i}`} onMouseDown={(e) => { 
+            audioService.play('click'); 
+            markInteraction(); 
+            const move = (me: MouseEvent) => handleDrag(me as any, i); 
+            const up = () => { 
+              window.removeEventListener('mousemove', move); 
+              window.removeEventListener('mouseup', up); 
+            }; 
+            window.addEventListener('mousemove', move); 
+            window.addEventListener('mouseup', up); 
+          }} className="absolute w-10 h-10 bg-white border-2 rounded shadow-xl z-20 flex items-center justify-center cursor-move transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 active:scale-95 transition-all" style={{ left: c.x, top: c.y, borderColor: COLORS[i] }}>
             <div className="w-1 h-3 rounded-full absolute" style={{ backgroundColor: COLORS[i] }} />
             <div className="w-3 h-1 rounded-full absolute" style={{ backgroundColor: COLORS[i] }} />
           </div>
