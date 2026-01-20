@@ -1,47 +1,45 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface Props {
   message: string;
   position: string;
-  currentStep: number;
+  onNext?: () => void;
+  onClose: () => void;
+  isLast?: boolean;
+  // Optional direction prop to support different tooltip orientations used in specific simulations like Overfitting
+  direction?: 'left' | 'right' | 'top' | 'bottom';
 }
 
-const GuidanceTooltip: React.FC<Props> = ({ message, position, currentStep }) => {
-  const [visible, setVisible] = useState(true);
-
-  // Reset visibility when the step changes
-  useEffect(() => {
-    setVisible(true);
-  }, [currentStep]);
-
-  // Global listener to dismiss
-  useEffect(() => {
-    const handleDismiss = () => {
-      if (visible) setVisible(false);
-    };
-    window.addEventListener('click', handleDismiss);
-    return () => window.removeEventListener('click', handleDismiss);
-  }, [visible]);
-
-  if (!visible) return null;
-
+const GuidanceTooltip: React.FC<Props> = ({ message, position, onNext, onClose, isLast, direction }) => {
   return (
-    <div className={`absolute z-50 animate-in fade-in zoom-in duration-500 pointer-events-none ${position}`}>
-      <div className="relative bg-[#FFF9E5] border border-[#D4A017] p-4 shadow-xl max-w-[220px]">
-        <div className="flex items-start space-x-3">
-          <div className="w-2 h-2 bg-[#D4A017] rounded-full mt-1.5 animate-ping shrink-0" />
-          <div className="flex flex-col">
+    <div className={`absolute z-[150] animate-in fade-in zoom-in duration-300 pointer-events-auto ${position}`}>
+      <div className="relative bg-[#FFF9E5] border border-[#D4A017] p-5 shadow-[0_20px_60px_rgba(212,160,23,0.2)] max-w-[260px]">
+        <div className="flex flex-col">
+          <div className="flex items-start space-x-3 mb-4">
+            <div className="w-2.5 h-2.5 bg-[#D4A017] rounded-full mt-1 animate-pulse shrink-0 shadow-[0_0_10px_rgba(212,160,23,0.5)]" />
             <span className="font-mono text-[10px] font-bold text-[#856404] leading-relaxed uppercase tracking-tight">
               {message}
             </span>
-            <span className="mt-2 font-mono text-[7px] text-[#D4A017] uppercase tracking-widest opacity-60">
-              Click anywhere to dismiss
-            </span>
+          </div>
+          
+          <div className="flex items-center justify-between pt-3 border-t border-[#D4A017]/20">
+            <button 
+              onClick={onClose}
+              className="font-mono text-[8px] text-[#D4A017] uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity"
+            >
+              Dismiss
+            </button>
+            {onNext && (
+              <button 
+                onClick={onNext}
+                className="bg-[#D4A017] text-white px-3 py-1.5 text-[8px] font-bold uppercase tracking-widest hover:bg-[#856404] transition-colors shadow-sm"
+              >
+                {isLast ? 'Finish' : 'Next Tip'}
+              </button>
+            )}
           </div>
         </div>
-        {/* Tooltip Arrow */}
-        <div className="absolute -left-1.5 top-6 w-3 h-3 bg-[#FFF9E5] border-l border-b border-[#D4A017] rotate-45" />
       </div>
     </div>
   );

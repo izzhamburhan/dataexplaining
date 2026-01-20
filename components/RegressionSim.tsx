@@ -16,15 +16,27 @@ interface Props {
   onInteract?: () => void;
   onNext?: () => void;
   nextLabel?: string;
+  isTourActive?: boolean;
+  onTourClose?: () => void;
 }
 
-const RegressionSim: React.FC<Props> = ({ showError = false, adjustment, currentStep = 0, onInteract, onNext, nextLabel }) => {
+const TOUR_STEPS = [
+  { message: "These dots are observations. In regression, we try to explain their vertical position based on their horizontal progress.", position: "top-[20%] left-[50%]" },
+  { message: "The black line is our 'Prediction'. We adjust it using these coefficients below.", position: "top-[40%] left-[20%]" },
+  { message: "θ1 (Slope) controls the angle. Observe how it matches the general trend of the data points.", position: "bottom-[20%] left-[10%]" },
+  { message: "The MSE (Mean Squared Error) tracks our accuracy. Lower numbers indicate a better fitting manuscript.", position: "top-[10%] right-[10%]" }
+];
+
+const RegressionSim: React.FC<Props> = ({ showError = false, adjustment, currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
   const [slope, setSlope] = useState(-0.5);
   const [intercept, setIntercept] = useState(380);
-  const [showTooltip, setShowTooltip] = useState(true);
+  const [activeTourIndex, setActiveTourIndex] = useState(0);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
 
-  // Handle AI adjustments
+  useEffect(() => {
+    if (isTourActive) setActiveTourIndex(0);
+  }, [isTourActive]);
+
   useEffect(() => {
     if (adjustment?.parameter === 'slope') {
       setSlope(adjustment.value);
@@ -36,29 +48,12 @@ const RegressionSim: React.FC<Props> = ({ showError = false, adjustment, current
     }
   }, [adjustment]);
 
-  useEffect(() => {
-    setShowTooltip(true);
-    setHasActuallyInteracted(currentStep === 0); // Step 0 is intro, allow immediate progression
-  }, [currentStep]);
-
   const markInteraction = () => {
     if (!hasActuallyInteracted) {
       setHasActuallyInteracted(true);
       onInteract?.();
     }
   };
-
-  useEffect(() => {
-    const handleGlobalClick = () => {
-      if (showTooltip) {
-        setShowTooltip(false);
-        markInteraction();
-      }
-    };
-
-    window.addEventListener('click', handleGlobalClick);
-    return () => window.removeEventListener('click', handleGlobalClick);
-  }, [showTooltip]);
 
   const errorDetails = useMemo(() => {
     let totalSqError = 0;
@@ -78,35 +73,25 @@ const RegressionSim: React.FC<Props> = ({ showError = false, adjustment, current
     return { label: 'Poor Correlation', color: 'text-rose-600', desc: 'The model is misaligned with the data distribution. The error squares are significantly large.' };
   }, [errorDetails.mse]);
 
+  const handleTourNext = () => {
+    audioService.play('click');
+    if (activeTourIndex < TOUR_STEPS.length - 1) {
+      setActiveTourIndex(prev => prev + 1);
+    } else {
+      onTourClose?.();
+    }
+  };
+
   return (
     <div className="w-full flex flex-col items-center bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] relative">
-      {/* GUIDANCE TOOLTIPS */}
-      {showTooltip && (
-        <>
-          {currentStep === 0 && (
-            <GuidanceTooltip 
-              message="Each dot represents an observation. Notice how they follow a downward trend." 
-              position="top-1/4 left-[40%]" 
-              currentStep={currentStep}
-            />
-          )}
-          
-          {currentStep === 1 && (
-            <GuidanceTooltip 
-              message="Adjust these sliders to move the line. Try to 'slice' through the center of the dots." 
-              position="bottom-1/4 left-[45%]" 
-              currentStep={currentStep}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <GuidanceTooltip 
-              message="These squares represent 'Loss'. As you improve the fit, the squares will shrink!" 
-              position="top-12 right-4" 
-              currentStep={currentStep}
-            />
-          )}
-        </>
+      {isTourActive && (
+        <GuidanceTooltip 
+          message={TOUR_STEPS[activeTourIndex].message}
+          position={TOUR_STEPS[activeTourIndex].position}
+          onNext={handleTourNext}
+          onClose={() => onTourClose?.()}
+          isLast={activeTourIndex === TOUR_STEPS.length - 1}
+        />
       )}
 
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
@@ -134,32 +119,29 @@ const RegressionSim: React.FC<Props> = ({ showError = false, adjustment, current
         ))}
       </div>
 
-      {currentStep > 0 && (
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-12 animate-in fade-in slide-in-from-bottom-4">
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between mb-4">
-                <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Coefficient (θ1)</label>
-                <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-2 py-0.5 border border-black/5 rounded">{slope.toFixed(2)}</span>
-              </div>
-              <input type="range" min="-2" max="1" step="0.01" value={slope} onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-12 animate-in fade-in slide-in-from-bottom-4">
+        <div className="space-y-6">
+          <div>
+            <div className="flex justify-between mb-4">
+              <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Coefficient (θ1)</label>
+              <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-2 py-0.5 border border-black/5 rounded">{slope.toFixed(2)}</span>
             </div>
-            <div>
-              <div className="flex justify-between mb-4">
-                <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Intercept (θ0)</label>
-                <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-2 py-0.5 border border-black/5 rounded">{intercept.toFixed(0)}</span>
-              </div>
-              <input type="range" min="0" max="500" step="1" value={intercept} onChange={(e) => { setIntercept(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
-            </div>
+            <input type="range" min="-2" max="1" step="0.01" value={slope} onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
           </div>
-          <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-            <h5 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#999] mb-3">Model Analysis</h5>
-            <p className="text-xs text-[#444] leading-relaxed italic font-normal">"{analysis.desc}"</p>
+          <div>
+            <div className="flex justify-between mb-4">
+              <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Intercept (θ0)</label>
+              <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-2 py-0.5 border border-black/5 rounded">{intercept.toFixed(0)}</span>
+            </div>
+            <input type="range" min="0" max="500" step="1" value={intercept} onChange={(e) => { setIntercept(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
           </div>
         </div>
-      )}
+        <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#999] mb-3">Model Analysis</h5>
+          <p className="text-xs text-[#444] leading-relaxed italic font-normal">"{analysis.desc}"</p>
+        </div>
+      </div>
 
-      {/* NEXT STEP BUTTON AREA */}
       <div className={`w-full p-8 border-2 border-dashed border-[#A5C9FF]/50 transition-all duration-500 bg-[#F9FBFF]/30 mt-4 ${hasActuallyInteracted ? 'opacity-100' : 'opacity-0'}`}>
         <button 
           onClick={(e) => {
@@ -172,14 +154,6 @@ const RegressionSim: React.FC<Props> = ({ showError = false, adjustment, current
           <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
         </button>
       </div>
-      
-      {showTooltip && (
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="mt-auto mb-4 bg-black/40 text-white text-[8px] font-mono uppercase tracking-[0.2em] px-3 py-1 rounded-full animate-pulse">
-            Click anywhere to dismiss guide
-          </div>
-        </div>
-      )}
     </div>
   );
 };

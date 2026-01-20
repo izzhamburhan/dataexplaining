@@ -11,15 +11,28 @@ interface Props {
   onInteract?: () => void;
   onNext?: () => void;
   nextLabel?: string;
+  isTourActive?: boolean;
+  onTourClose?: () => void;
 }
 
-const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel }) => {
+const TOUR_STEPS = [
+  { message: "This parabola is our 'Error Valley'. The model wants to find the bottom where error is zero.", position: "top-[20%] left-[30%]" },
+  { message: "The Learning Rate (α) determines how big each step is. Too large, and you'll jump right over the valley!", position: "bottom-[25%] left-[10%]" },
+  { message: "Click 'Run Training' to watch the model attempt to reach the bottom using your parameters.", position: "bottom-[15%] left-[25%]" }
+];
+
+const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
   const [point, setPoint] = useState(8);
   const [lr, setLr] = useState(0.1);
   const [history, setHistory] = useState<number[]>([]);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [iterationCount, setIterationCount] = useState(0);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
+  const [activeTourIndex, setActiveTourIndex] = useState(0);
+
+  useEffect(() => {
+    if (isTourActive) setActiveTourIndex(0);
+  }, [isTourActive]);
   
   useEffect(() => {
     if (adjustment?.parameter === 'lr') {
@@ -90,8 +103,27 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
     return { status: 'idle', label: 'Monitoring Descent...', color: 'text-slate-300', description: 'Adjust parameters and run the training loop.' };
   }, [point, history, iterationCount]);
 
+  const handleTourNext = () => {
+    audioService.play('click');
+    if (activeTourIndex < TOUR_STEPS.length - 1) {
+      setActiveTourIndex(prev => prev + 1);
+    } else {
+      onTourClose?.();
+    }
+  };
+
   return (
     <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
+      {isTourActive && (
+        <GuidanceTooltip 
+          message={TOUR_STEPS[activeTourIndex].message}
+          position={TOUR_STEPS[activeTourIndex].position}
+          onNext={handleTourNext}
+          onClose={() => onTourClose?.()}
+          isLast={activeTourIndex === TOUR_STEPS.length - 1}
+        />
+      )}
+
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>

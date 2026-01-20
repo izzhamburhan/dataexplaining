@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { audioService } from '../services/audioService';
+import GuidanceTooltip from './GuidanceTooltip';
 
 // Fixed "Truth" function - The underlying pattern the model SHOULD find
 const truthFn = (x: number) => Math.sin(x * 0.8) * 80 + 150;
@@ -23,11 +24,24 @@ interface Props {
   onInteract?: () => void;
   onNext?: () => void;
   nextLabel?: string;
+  isTourActive?: boolean;
+  onTourClose?: () => void;
 }
 
-const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel }) => {
+const TOUR_STEPS = [
+  { message: "The solid black diamonds are our 'Training Data'. They contain underlying truth but also random noise.", position: "top-[40%] left-[25%]", direction: 'left' as const },
+  { message: "This Complexity slider increases the model's flexibility. High complexity allows it to hit every point precisely.", position: "bottom-[22%] left-[40%]", direction: 'left' as const },
+  { message: "Watch out! When complexity is too high, the line wiggles wildly. It is 'Memorizing' the noise instead of 'Learning' the pattern.", position: "top-[50%] left-[45%]", direction: 'left' as const }
+];
+
+const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
   const [complexity, setComplexity] = useState(1);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
+  const [activeTourIndex, setActiveTourIndex] = useState(0);
+
+  useEffect(() => {
+    if (isTourActive) setActiveTourIndex(0);
+  }, [isTourActive]);
 
   useEffect(() => {
     if (adjustment?.parameter === 'complexity') {
@@ -85,9 +99,10 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
         
         y = base + wobble + pull;
       }
-      points.push(`${(x / 10) * 100}% ${y / 3}%`);
+      // Scaling to 0-100 range for SVG viewBox
+      points.push(`${(x / 10) * 100},${y / 3}`);
     }
-    return points.join(', ');
+    return points.join(' ');
   }, [complexity]);
 
   const analysis = useMemo(() => {
@@ -96,8 +111,28 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
     return { label: 'OVERFITTING', color: 'text-rose-600', desc: 'The model is "memorizing" noise. It zig-zags wildly to hit every training point, losing sight of the true pattern.', accent: '#E11D48' };
   }, [complexity]);
 
+  const handleTourNext = () => {
+    audioService.play('click');
+    if (activeTourIndex < TOUR_STEPS.length - 1) {
+      setActiveTourIndex(prev => prev + 1);
+    } else {
+      onTourClose?.();
+    }
+  };
+
   return (
     <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
+      {isTourActive && (
+        <GuidanceTooltip 
+          message={TOUR_STEPS[activeTourIndex].message}
+          position={TOUR_STEPS[activeTourIndex].position}
+          direction={TOUR_STEPS[activeTourIndex].direction}
+          onNext={handleTourNext}
+          onClose={() => onTourClose?.()}
+          isLast={activeTourIndex === TOUR_STEPS.length - 1}
+        />
+      )}
+
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
@@ -113,14 +148,14 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
         {/* Background Grid */}
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
 
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
           {/* 1. The Underlying Truth (The Ghost Line) */}
           <path 
             d={Array.from({length: 40}).map((_, i) => {
               const x = (i/39)*10;
-              return `${i===0?'M':'L'} ${(x/10)*100}% ${truthFn(x)/3}%`;
+              return `${i===0?'M':'L'} ${(x/10)*100} ${truthFn(x)/3}`;
             }).join(' ')}
-            fill="none" stroke="#CCC" strokeWidth="1" strokeDasharray="6,4" className="opacity-30"
+            fill="none" stroke="#666" strokeWidth="0.5" strokeDasharray="2,2" className="opacity-40"
           />
 
           {/* 2. The Model's Prediction (The Moving Line) */}
@@ -128,7 +163,7 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
             points={modelPath} 
             fill="none" 
             stroke={analysis.accent} 
-            strokeWidth={complexity > 7 ? "2" : "4"} 
+            strokeWidth={complexity > 7 ? "0.8" : "1.2"} 
             className="transition-all duration-300 drop-shadow-sm" 
           />
         </svg>
@@ -146,7 +181,7 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
         ))}
 
         {/* Real-time Legend Overlay */}
-        <div className="absolute top-4 right-4 flex flex-col items-end space-y-2 bg-white/80 backdrop-blur-sm p-4 border border-black/5">
+        <div className="absolute top-4 right-4 flex flex-col items-end space-y-2 bg-white/80 backdrop-blur-sm p-4 border border-black/5 rounded shadow-sm">
            <div className="flex items-center space-x-3">
               <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">Training Data (Input)</span>
               <div className="w-2.5 h-2.5 bg-[#121212] rotate-45"></div>
@@ -157,7 +192,7 @@ const OverfittingSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIntera
            </div>
            <div className="flex items-center space-x-3">
               <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">True Pattern</span>
-              <div className="w-4 h-[1px] border-b border-dashed border-[#CCC]"></div>
+              <div className="w-4 h-[1px] border-b border-dashed border-[#666]"></div>
            </div>
            <div className="flex items-center space-x-3">
               <span className="font-mono text-[8px] text-[#999] uppercase tracking-widest">Model Guess</span>
