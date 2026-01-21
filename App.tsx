@@ -25,7 +25,7 @@ import { audioService } from './services/audioService';
 
 interface AiResponse {
   explanation: string;
-  suggestions: { label: string; parameter: string; value: number }[];
+  suggestions: { label: string; parameter: string; value: number } | { label: string; parameter: string; value: number }[];
 }
 
 const InfoModal: React.FC<{ 
@@ -35,14 +35,32 @@ const InfoModal: React.FC<{
 }> = ({ isOpen, type, onClose }) => {
   if (!isOpen || !type) return null;
 
-  const content = {
+  const content: Record<string, { title: string, body: React.ReactNode }> = {
     about: {
       title: "About the Compendium",
       body: "DataExplaining is an interactive curriculum dedicated to the visual intuition of machine intelligence. We believe that the mathematical bedrock of AI is best understood through tactile simulation and clear, non-abstract analogies. Each 'Manuscript' in our library is designed to reveal the structural logic behind a specific algorithm."
     },
     contact: {
       title: "Contact & Inquiries",
-      body: "For editorial feedback, collaboration inquiries, or technical support regarding the Manuscript Library, please reach out to our desk. Our current protocol favors asynchronous correspondence to maintain the focus of our researchers."
+      body: (
+        <div className="space-y-6">
+          <p>For research collaborations, feedback, or direct inquiries, please reach out via the following channels:</p>
+          <div className="flex flex-col space-y-4 pt-6 border-t border-black/5">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-[0.2em] mb-1">Electronic Mail</span>
+              <a href="mailto:maizzham01@gmail.com" className="text-sm font-serif italic text-[#121212] hover:text-[#2A4D69] transition-colors underline decoration-black/10 underline-offset-4">maizzham01@gmail.com</a>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-[0.2em] mb-1">Instagram Journal</span>
+              <a href="https://www.instagram.com/izzh.am/" target="_blank" rel="noopener noreferrer" className="text-sm font-serif italic text-[#121212] hover:text-[#2A4D69] transition-colors underline decoration-black/10 underline-offset-4">@izzh.am</a>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-[0.2em] mb-1">TikTok Dispatch</span>
+              <a href="https://www.tiktok.com/@3rror14" target="_blank" rel="noopener noreferrer" className="text-sm font-serif italic text-[#121212] hover:text-[#2A4D69] transition-colors underline decoration-black/10 underline-offset-4">@3rror14</a>
+            </div>
+          </div>
+        </div>
+      )
     }
   };
 
@@ -53,7 +71,7 @@ const InfoModal: React.FC<{
       <div className="bg-white max-w-md w-full p-10 shadow-2xl border border-black/5 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
         <span className="font-mono text-[10px] font-bold text-[#CCC] uppercase tracking-[0.4em] block mb-2">Protocol: {type.toUpperCase()}</span>
         <h3 className="text-2xl font-serif italic text-[#121212] mb-6">{active.title}</h3>
-        <p className="text-sm text-[#666] leading-loose italic mb-8">{active.body}</p>
+        <div className="text-sm text-[#666] leading-loose italic mb-8">{active.body}</div>
         <button onClick={onClose} className="w-full py-4 bg-[#121212] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-[#2A4D69] transition-all">Dismiss</button>
       </div>
     </div>
@@ -193,6 +211,11 @@ const App: React.FC = () => {
     setInfoModalType(type);
   };
 
+  const startTour = () => {
+    audioService.play('blip');
+    setIsTourActive(true);
+  };
+
   return (
     <div className="h-screen bg-[#FDFCFB] text-[#121212] flex flex-col overflow-hidden">
       <nav className="h-14 border-b border-black/5 flex items-center justify-between px-6 bg-[#FDFCFB]/90 backdrop-blur-md z-[100] shrink-0">
@@ -252,6 +275,15 @@ const App: React.FC = () => {
                   </button>
                 ))}
               </div>
+              <div className="mt-6 pt-6 border-t border-black/5">
+                <button 
+                  onClick={startTour}
+                  className="w-full flex items-center justify-between p-3 bg-[#D4A017]/5 border border-[#D4A017]/20 hover:bg-[#D4A017]/10 transition-all group"
+                >
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#856404]">Start Briefing</span>
+                  <div className="w-2 h-2 bg-[#D4A017] rounded-full animate-pulse group-hover:scale-125 transition-transform" />
+                </button>
+              </div>
             </aside>
 
             <div className="w-[340px] shrink-0 border-r border-black/5 bg-white overflow-y-auto">
@@ -271,11 +303,15 @@ const App: React.FC = () => {
                     <div className="mt-3 bg-[#F9F8F6] p-4 text-[11px] italic border-l border-[#2A4D69] space-y-2">
                       <p>"{aiData.explanation}"</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {aiData.suggestions.map((s, idx) => (
+                        {Array.isArray(aiData.suggestions) ? aiData.suggestions.map((s, idx) => (
                           <button key={idx} onClick={() => applyAdjustment(s.parameter, s.value)} className="px-1.5 py-0.5 bg-white border border-black/5 text-[7px] font-bold uppercase tracking-widest text-[#2A4D69] hover:bg-[#2A4D69] hover:text-white transition-all">
                             {s.label}
                           </button>
-                        ))}
+                        )) : (
+                          <button onClick={() => applyAdjustment((aiData.suggestions as any).parameter, (aiData.suggestions as any).value)} className="px-1.5 py-0.5 bg-white border border-black/5 text-[7px] font-bold uppercase tracking-widest text-[#2A4D69] hover:bg-[#2A4D69] hover:text-white transition-all">
+                            {(aiData.suggestions as any).label}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -288,8 +324,8 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-grow flex items-center justify-center p-4 bg-[#FDFCFB] overflow-y-auto">
-               <div className="w-full max-w-2xl">
+            <div className="flex-grow flex flex-col items-center p-8 bg-[#FDFCFB] overflow-y-auto">
+               <div className="w-full max-w-5xl transition-all duration-700">
                   {activeLesson.id === 'linear-regression' && <RegressionSim {...commonProps} showError={currentStep >= 2} />}
                   {activeLesson.id === 'gradient-descent' && <GradientDescentSim {...commonProps} />}
                   {activeLesson.id === 'logistic-regression' && <LogisticSim {...commonProps} />}
