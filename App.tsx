@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LESSONS } from './constants';
-import { Lesson, LessonStep, UserContext } from './types';
+import { Lesson, LessonStep, UserContext, LessonCategory } from './types';
 import LessonCard from './components/LessonCard';
 import RegressionSim from './components/RegressionSim';
 import BiasSim from './components/BiasSim';
@@ -118,6 +118,8 @@ const App: React.FC = () => {
   const [isTourActive, setIsTourActive] = useState(false);
 
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<LessonCategory | null>(null);
+  
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
   const [recommendation, setRecommendation] = useState<{ lessonId: string, reason: string } | null>(null);
@@ -128,9 +130,28 @@ const App: React.FC = () => {
   const step: LessonStep | undefined = activeLesson?.steps[currentStep];
 
   const filteredLessons = useMemo(() => {
-    if (!difficultyFilter) return LESSONS;
-    return LESSONS.filter(l => l.difficulty === difficultyFilter);
-  }, [difficultyFilter]);
+    return LESSONS.filter(l => {
+      const difficultyMatch = !difficultyFilter || l.difficulty === difficultyFilter;
+      const categoryMatch = !categoryFilter || l.category === categoryFilter;
+      return difficultyMatch && categoryMatch;
+    });
+  }, [difficultyFilter, categoryFilter]);
+
+  const difficultyCounts = useMemo(() => {
+    const levels = ['Beginner', 'Intermediate', 'Advanced'];
+    return levels.reduce((acc, lvl) => {
+      acc[lvl] = LESSONS.filter(l => l.difficulty === lvl).length;
+      return acc;
+    }, {} as Record<string, number>);
+  }, []);
+
+  const categoryCounts = useMemo(() => {
+    const cats = Object.values(LessonCategory);
+    return cats.reduce((acc, cat) => {
+      acc[cat] = LESSONS.filter(l => l.category === cat).length;
+      return acc;
+    }, {} as Record<string, number>);
+  }, []);
 
   useEffect(() => {
     setHasInteracted(false);
@@ -227,6 +248,17 @@ const App: React.FC = () => {
     setDifficultyFilter(prev => prev === lvl ? null : lvl);
   };
 
+  const toggleCategory = (cat: LessonCategory) => {
+    audioService.play('click');
+    setCategoryFilter(prev => prev === cat ? null : cat);
+  };
+
+  const clearFilters = () => {
+    audioService.play('click');
+    setDifficultyFilter(null);
+    setCategoryFilter(null);
+  };
+
   return (
     <div className="h-screen bg-[#FDFCFB] text-[#121212] flex flex-col overflow-hidden">
       <nav className="h-14 border-b border-black/5 flex items-center justify-between px-6 bg-[#FDFCFB]/90 backdrop-blur-md z-[100] shrink-0">
@@ -260,33 +292,60 @@ const App: React.FC = () => {
                 <p className="text-base text-[#666] leading-relaxed max-w-xl">A visual curriculum dedicated to the mathematical intuition behind modern algorithms.</p>
               </header>
 
-              <div className="flex items-center space-x-8 mb-12 ml-10">
-                <span className="text-[10px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">Filter Manuscripts</span>
-                <div className="flex space-x-2">
-                  {['Beginner', 'Intermediate', 'Advanced'].map(lvl => (
-                    <button 
-                      key={lvl}
-                      onClick={() => toggleDifficulty(lvl)}
-                      className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest transition-all border ${difficultyFilter === lvl ? 'bg-[#121212] text-white border-[#121212]' : 'bg-transparent text-[#999] border-black/5 hover:border-black/20'}`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
-                  {difficultyFilter && (
-                    <button 
-                      onClick={() => setDifficultyFilter(null)}
-                      className="px-3 py-1 text-[8px] font-bold uppercase tracking-widest text-[#E11D48] hover:underline transition-all"
-                    >
-                      Clear
-                    </button>
-                  )}
+              <div className="mb-12 ml-10 flex flex-wrap items-center gap-x-8 gap-y-4 text-[9px] font-mono font-bold uppercase tracking-[0.2em] border-t border-b border-black/5 py-6">
+                <div className="flex items-center space-x-3">
+                  <span className="text-[#CCC]">Category:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.values(LessonCategory).map(cat => (
+                      <button 
+                        key={cat}
+                        onClick={() => toggleCategory(cat)}
+                        className={`px-3 py-1.5 transition-all border ${categoryFilter === cat ? 'bg-[#121212] text-white border-[#121212]' : 'bg-transparent text-[#999] border-black/5 hover:border-black/20'}`}
+                      >
+                        {cat} <span className="ml-1 opacity-50">[{categoryCounts[cat]}]</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <div className="hidden md:block w-px h-6 bg-black/5"></div>
+
+                <div className="flex items-center space-x-3">
+                  <span className="text-[#CCC]">Difficulty:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {['Beginner', 'Intermediate', 'Advanced'].map(lvl => (
+                      <button 
+                        key={lvl}
+                        onClick={() => toggleDifficulty(lvl)}
+                        className={`px-3 py-1.5 transition-all border ${difficultyFilter === lvl ? 'bg-[#121212] text-white border-[#121212]' : 'bg-transparent text-[#999] border-black/5 hover:border-black/20'}`}
+                      >
+                        {lvl} <span className="ml-1 opacity-50">[{difficultyCounts[lvl]}]</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(difficultyFilter || categoryFilter) && (
+                  <button 
+                    onClick={clearFilters}
+                    className="text-[#E11D48] hover:underline"
+                  >
+                    [ Reset All ]
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-                {filteredLessons.map((lesson) => (
-                  <LessonCard key={lesson.id} lesson={lesson} onClick={() => startLesson(lesson)} />
-                ))}
+                {filteredLessons.length > 0 ? (
+                  filteredLessons.map((lesson) => (
+                    <LessonCard key={lesson.id} lesson={lesson} onClick={() => startLesson(lesson)} />
+                  ))
+                ) : (
+                  <div className="col-span-full py-20 border-2 border-dashed border-black/5 flex flex-col items-center justify-center text-center">
+                    <span className="font-mono text-[10px] text-[#CCC] uppercase tracking-widest mb-4">No Matches Found</span>
+                    <p className="text-sm font-serif italic text-[#999]">Adjust your search parameters to find a manuscript.</p>
+                  </div>
+                )}
               </div>
             </div>
             <Footer onOpenInfo={handleOpenInfo} />
