@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LESSONS } from './constants';
 import { Lesson, LessonStep, UserContext } from './types';
 import LessonCard from './components/LessonCard';
@@ -38,7 +38,7 @@ const InfoModal: React.FC<{
   const content: Record<string, { title: string, body: React.ReactNode }> = {
     about: {
       title: "About the Compendium",
-      body: "DataExplaining is an interactive curriculum dedicated to the visual intuition of machine intelligence. We believe that the mathematical bedrock of AI is best understood through tactile simulation and clear, non-abstract analogies. Each 'Manuscript' in our library is designed to reveal the structural logic behind a specific algorithm."
+      body: "Dataxplaining is an interactive curriculum dedicated to the visual intuition of machine intelligence. We believe that the mathematical bedrock of AI is best understood through tactile simulation and clear, non-abstract analogies. Each 'Manuscript' in our library is designed to reveal the structural logic behind a specific algorithm."
     },
     contact: {
       title: "Contact & Inquiries",
@@ -82,7 +82,7 @@ const Footer: React.FC<{ onOpenInfo: (type: 'about' | 'contact') => void }> = ({
   <footer className="py-8 border-t border-black/5">
     <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
       <div className="flex items-center space-x-4">
-        <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">© 2025 DataExplaining ● All Rights Reserved</span>
+        <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">© 2025 Dataxplaining ● All Rights Reserved</span>
       </div>
       <div className="flex items-center space-x-12">
         <button 
@@ -117,6 +117,7 @@ const App: React.FC = () => {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isTourActive, setIsTourActive] = useState(false);
 
+  const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
   const [recommendation, setRecommendation] = useState<{ lessonId: string, reason: string } | null>(null);
@@ -125,6 +126,11 @@ const App: React.FC = () => {
   const [infoModalType, setInfoModalType] = useState<'about' | 'contact' | null>(null);
 
   const step: LessonStep | undefined = activeLesson?.steps[currentStep];
+
+  const filteredLessons = useMemo(() => {
+    if (!difficultyFilter) return LESSONS;
+    return LESSONS.filter(l => l.difficulty === difficultyFilter);
+  }, [difficultyFilter]);
 
   useEffect(() => {
     setHasInteracted(false);
@@ -216,12 +222,17 @@ const App: React.FC = () => {
     setIsTourActive(true);
   };
 
+  const toggleDifficulty = (lvl: string) => {
+    audioService.play('click');
+    setDifficultyFilter(prev => prev === lvl ? null : lvl);
+  };
+
   return (
     <div className="h-screen bg-[#FDFCFB] text-[#121212] flex flex-col overflow-hidden">
       <nav className="h-14 border-b border-black/5 flex items-center justify-between px-6 bg-[#FDFCFB]/90 backdrop-blur-md z-[100] shrink-0">
         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveLesson(null)}>
-          <div className="w-7 h-7 bg-[#121212] flex items-center justify-center text-[#FDFCFB] text-[10px] font-mono font-bold">DE</div>
-          <span className="text-xs font-bold tracking-[0.2em] uppercase">DataExplaining</span>
+          <div className="w-7 h-7 bg-[#121212] flex items-center justify-center text-[#FDFCFB] text-[10px] font-mono font-bold">DX</div>
+          <span className="text-xs font-bold tracking-[0.2em] uppercase">Dataxplaining</span>
         </div>
         
         <div className="flex items-center space-x-6">
@@ -248,8 +259,32 @@ const App: React.FC = () => {
                 <h1 className="text-5xl font-serif italic mb-4 leading-tight">An Interactive <br/>Compendium of Models.</h1>
                 <p className="text-base text-[#666] leading-relaxed max-w-xl">A visual curriculum dedicated to the mathematical intuition behind modern algorithms.</p>
               </header>
+
+              <div className="flex items-center space-x-8 mb-12 ml-10">
+                <span className="text-[10px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">Filter Manuscripts</span>
+                <div className="flex space-x-2">
+                  {['Beginner', 'Intermediate', 'Advanced'].map(lvl => (
+                    <button 
+                      key={lvl}
+                      onClick={() => toggleDifficulty(lvl)}
+                      className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest transition-all border ${difficultyFilter === lvl ? 'bg-[#121212] text-white border-[#121212]' : 'bg-transparent text-[#999] border-black/5 hover:border-black/20'}`}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
+                  {difficultyFilter && (
+                    <button 
+                      onClick={() => setDifficultyFilter(null)}
+                      className="px-3 py-1 text-[8px] font-bold uppercase tracking-widest text-[#E11D48] hover:underline transition-all"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-                {LESSONS.map((lesson) => (
+                {filteredLessons.map((lesson) => (
                   <LessonCard key={lesson.id} lesson={lesson} onClick={() => startLesson(lesson)} />
                 ))}
               </div>
@@ -318,7 +353,7 @@ const App: React.FC = () => {
                   {activeLesson && <ImageGenerator modelName={activeLesson.title} userContext={activeUserContext} />}
                 </div>
                 <div className="mt-8 pt-4 border-t border-black/5 text-[7px] font-mono text-[#CCC] uppercase tracking-widest flex justify-between shrink-0">
-                  <span>© DE-LIB-2025</span>
+                  <span>© DX-LIB-2025</span>
                   <span>MS {activeLesson.id.toUpperCase()}</span>
                 </div>
               </div>
