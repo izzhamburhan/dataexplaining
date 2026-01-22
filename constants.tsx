@@ -176,13 +176,13 @@ export const LESSONS: Lesson[] = [
     difficulty: 'Intermediate',
     steps: [
       {
-        title: 'Simple is Better?',
-        description: 'A model that is too simple (Degree 1) fails to capture the underlying pattern. This is called Underfitting.',
-        actionLabel: 'Increase Complexity'
+        title: 'Phase 1: The Rigid Model',
+        description: 'A model that is too simple (Degree 1) fails to capture the underlying pattern. This is Underfitting. Notice how it misses the curvature of reality.',
+        actionLabel: 'Test Generalization'
       },
       {
-        title: 'Chasing the Noise',
-        description: 'Slide the complexity to the maximum. Notice how the line wiggles to hit every single point? That model is memorizing noise.',
+        title: 'Phase 2: Chasing the Noise',
+        description: 'Now, we introduce Validation Data (red dots). Slide the complexity up. Notice how the line wiggles to hit training points but fails to predict the new ones.',
         interactiveComponent: 'ComplexitySlider',
         actionLabel: 'Finish Lesson'
       }
@@ -196,14 +196,19 @@ export const LESSONS: Lesson[] = [
     difficulty: 'Intermediate',
     steps: [
       {
-        title: 'Weights and Signals',
-        description: 'Neurons take signals, multiply them by "weights", and pass them on. Adjust the weights to light up the final output.',
-        actionLabel: 'Tune the Network'
+        title: 'Phase 1: The Synapse',
+        description: 'Neural Networks are made of neurons connected by weights. Adjust θ1 and θ2 to see how the signal propagates to the output node.',
+        actionLabel: 'Next: Layers of Logic'
       },
       {
-        title: 'Non-Linearity',
-        description: 'By stacking these simple layers, Neural Networks can learn incredibly complex patterns that lines and trees cant.',
-        interactiveComponent: 'NeuralNetSimulation',
+        title: 'Phase 2: Hidden Depth',
+        description: 'Hidden layers allow networks to learn non-linear patterns. Here, an intermediate layer processes signals before final classification.',
+        actionLabel: 'Next: Ethical Audit'
+      },
+      {
+        title: 'Phase 3: The Bias Signal',
+        description: 'Algorithmic bias occurs when a network weights "Proxy Features" (like Zip Code) too heavily. Watch how the network learns to discriminate based on training data skew.',
+        interactiveComponent: 'NeuralBiasSlider',
         actionLabel: 'Finish Lesson'
       }
     ]
@@ -216,14 +221,19 @@ export const LESSONS: Lesson[] = [
     difficulty: 'Beginner',
     steps: [
       {
-        title: 'No Labels, No Problem',
-        description: 'In Unsupervised Learning, we dont tell the computer the answer. It has to find clusters on its own.',
-        actionLabel: 'Move the Centroids'
+        title: 'Phase 1: Gravity of Centers',
+        description: 'In K-Means, we place "Centroids" (numbered squares) in the space. Each point joins the cluster of its nearest centroid. Drag them to see groups form.',
+        actionLabel: 'Next: Auto-Convergence'
       },
       {
-        title: 'Minimize Inertia',
-        description: 'Drag the centroids around. Your goal is to find the center of each group to minimize the total "Inertia" (sum of distances).',
-        interactiveComponent: 'ClusteringSimulation',
+        title: 'Phase 2: The Mean Shift',
+        description: 'K-Means is an algorithm. It works by repeatedly moving the centroid to the mathematical average (the "mean") of its group. Click "Run Optimization Step".',
+        actionLabel: 'Next: Spatial Redlining'
+      },
+      {
+        title: 'Phase 3: The Redlining Trap',
+        description: 'Clustering on spatial data (location) can unintentionally create clusters that mimic demographic segregation. This is "Redlining via Algorithm".',
+        interactiveComponent: 'ClusterBiasSlider',
         actionLabel: 'Finish Lesson'
       }
     ]
@@ -236,14 +246,19 @@ export const LESSONS: Lesson[] = [
     difficulty: 'Advanced',
     steps: [
       {
-        title: 'Squashing Data',
-        description: 'PCA reduces dimensions while keeping as much information as possible. Rotate the axis to find the widest spread.',
-        actionLabel: 'Rotate Projection'
+        title: 'Phase 1: Axis Intuition',
+        description: 'PCA reduces dimensions by projecting 2D data onto a 1D line. Rotate the axis to find the direction where the data is most spread out.',
+        actionLabel: 'Next: Information Loss'
       },
       {
-        title: 'Maximum Variance',
-        description: 'When the points are most spread out on the line, you have found the Principal Component!',
-        interactiveComponent: 'PCASimulation',
+        title: 'Phase 2: The Cost of Compression',
+        description: 'Simplifying data always has a cost. The red lines represent the "Residuals"—the information we lose when we flatten the world.',
+        actionLabel: 'Next: Demographic Distillation'
+      },
+      {
+        title: 'Phase 3: The Proxy Trap',
+        description: 'When we distill data into its "Principal Components," we might accidentally preserve discriminatory proxies (like Zip Code) while losing individual nuances.',
+        interactiveComponent: 'PCABiasSlider',
         actionLabel: 'Finish Lesson'
       }
     ]
@@ -256,14 +271,19 @@ export const LESSONS: Lesson[] = [
     difficulty: 'Advanced',
     steps: [
       {
-        title: 'The Reward Loop',
-        description: 'An agent explores an environment. It gets a cookie for reaching the goal and a zap for hitting a wall.',
-        actionLabel: 'Start Training'
+        title: 'Phase 1: The Reward Signal',
+        description: 'The agent (black diamond) learns by receiving rewards (+100) and penalties (-100). Watch it explore the environment to find the goal.',
+        actionLabel: 'Next: Risk vs Reward'
       },
       {
-        title: 'Q-Learning',
-        description: 'Over time, the agent builds a "map" of rewards. Watch it learn the optimal path from scratch.',
-        interactiveComponent: 'ReinforcementSimulation',
+        title: 'Phase 2: The High-Risk Shortcut',
+        description: 'Now, we introduce a "Shortcut" guarded by a "Hazard". By adjusting the "Risk Tolerance", you can influence if the agent takes the safe path or the dangerous one.',
+        actionLabel: 'Next: The Redlining Loop'
+      },
+      {
+        title: 'Phase 3: The Redlining Loop',
+        description: 'Algorithmic bias in RL occurs when the cost of "service" in certain zones (B) is historically higher. The agent learns to avoid these zones entirely, effectively redlining them.',
+        interactiveComponent: 'RLBiasSlider',
         actionLabel: 'Finish Lesson'
       }
     ]

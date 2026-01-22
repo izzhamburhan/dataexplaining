@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { generateModelImage, generateModelDescription } from '../services/geminiService';
 import { audioService } from '../services/audioService';
@@ -113,7 +114,6 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
           ) : (
             <>
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {/* Fixed duplicate strokeLinecap by changing second instance to strokeLinejoin */}
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>Visualize Real-World Application</span>
@@ -194,7 +194,7 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
               </div>
 
               {/* SCROLLABLE DESCRIPTION ONLY */}
-              <div className="flex-grow min-h-0 overflow-y-auto px-8 md:p-12 py-10 custom-scrollbar">
+              <div className="flex-grow min-h-0 overflow-y-auto px-8 md:p-12 py-10">
                 <div className="space-y-8">
                   <div className="border-l-2 border-[#2A4D69] pl-6 py-2">
                     <label className="font-mono text-[9px] font-bold text-[#AAA] uppercase tracking-[0.3em] block mb-4">Real-World Application</label>
@@ -221,11 +221,6 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
             </div>
           </div>
           <div className="absolute inset-0 -z-10" onClick={() => setIsModalOpen(false)}></div>
-          <style dangerouslySetInnerHTML={{ __html: `
-            .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-            .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E5E5; border-radius: 4px; }
-          `}} />
         </div>
       )}
     </div>

@@ -3,8 +3,15 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { audioService } from '../services/audioService';
 import GuidanceTooltip from './GuidanceTooltip';
 
-const POINTS = Array.from({ length: 45 }, (_, i) => ({ id: i, x: Math.random() * 700 + 50, y: Math.random() * 450 + 50 }));
+// Structured data for Phase 3: Spatial Segregation (Redlining) simulation
+const COLORED_POINTS = [
+  ...Array.from({ length: 15 }, (_, i) => ({ id: i, x: Math.random() * 250 + 50, y: Math.random() * 250 + 50, group: 'A' })),
+  ...Array.from({ length: 15 }, (_, i) => ({ id: i + 15, x: Math.random() * 250 + 500, y: Math.random() * 250 + 250, group: 'B' })),
+  ...Array.from({ length: 15 }, (_, i) => ({ id: i + 30, x: Math.random() * 250 + 100, y: Math.random() * 150 + 400, group: 'C' })),
+];
+
 const COLORS = ['#14b8a6', '#8b5cf6', '#f59e0b', '#ef4444', '#3b82f6'];
+const GROUP_COLORS = { 'A': '#121212', 'B': '#E11D48', 'C': '#2A4D69' };
 
 interface Props {
   currentStep?: number;
@@ -17,26 +24,38 @@ interface Props {
 
 const TOUR_STEPS = [
   { message: "K-Means groups data points by their proximity to 'Centroids'.", position: "top-[20%] left-[10%]" },
-  { message: "Drag the centroids manually. The dotted lines show which point belongs to which group.", position: "top-[40%] left-[40%]" },
-  { message: "Lower 'Inertia' means your centroids are perfectly centered within their clusters.", position: "bottom-[15%] left-[20%]" }
+  { message: "In Phase 2, click 'Step Convergence' to see the centroids calculate their own center.", position: "top-[40%] left-[40%]" },
+  { message: "In Phase 3, notice how spatial clustering often reinforces existing demographic boundaries.", position: "bottom-[15%] left-[20%]" }
 ];
 
 const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
   const [k, setK] = useState(3);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
-  const [centroids, setCentroids] = useState(() => Array.from({ length: 5 }, (_, i) => ({ x: 150 + i * 150, y: 250 + (i % 2) * 150 })));
+  const [centroids, setCentroids] = useState(() => Array.from({ length: 5 }, (_, i) => ({ x: 150 + i * 150, y: 250 + (i % 2) * 100 })));
   const [activeTourIndex, setActiveTourIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const isFoundation = currentStep === 0;
+  const isOptimization = currentStep === 1;
+  const isRedlining = currentStep === 2;
+
   useEffect(() => { if (isTourActive) setActiveTourIndex(0); }, [isTourActive]);
-  useEffect(() => { setHasActuallyInteracted(currentStep === 0); }, [currentStep]);
+  
+  useEffect(() => { 
+    setHasActuallyInteracted(isFoundation);
+    if (isRedlining) {
+      setK(3); // Fix K for Redlining explanation
+    }
+  }, [currentStep, isFoundation, isRedlining]);
 
   const markInteraction = () => { if (!hasActuallyInteracted) { setHasActuallyInteracted(true); onInteract?.(); } };
 
   const activeCentroids = useMemo(() => centroids.slice(0, k), [centroids, k]);
+  
   const results = useMemo(() => {
     let totalInertia = 0;
-    const assignments = POINTS.map(p => {
+    const assignments = COLORED_POINTS.map(p => {
       let minDist = Infinity, clusterIdx = 0;
       activeCentroids.forEach((c, idx) => {
         const d = Math.sqrt((p.x - c.x)**2 + (p.y - c.y)**2);
@@ -48,10 +67,48 @@ const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, n
     return { assignments, inertia: totalInertia };
   }, [activeCentroids, k]);
 
+  // Phase 2: Convergence Step
+  const runConvergenceStep = () => {
+    markInteraction();
+    audioService.play('blip');
+    const newCentroids = [...centroids];
+    
+    for (let i = 0; i < k; i++) {
+      const assignedPoints = results.assignments.filter(a => a.clusterIdx === i);
+      if (assignedPoints.length > 0) {
+        const meanX = assignedPoints.reduce((sum, p) => sum + p.x, 0) / assignedPoints.length;
+        const meanY = assignedPoints.reduce((sum, p) => sum + p.y, 0) / assignedPoints.length;
+        newCentroids[i] = { x: meanX, y: meanY };
+      }
+    }
+    setCentroids(newCentroids);
+  };
+
+  // Phase 3: Bias Metrics (Redlining)
+  const biasMetrics = useMemo(() => {
+    if (!isRedlining) return { segregationIndex: 0 };
+    // How purely do the clusters match the groups?
+    let pureNodes = 0;
+    for (let i = 0; i < k; i++) {
+      const cluster = results.assignments.filter(a => a.clusterIdx === i);
+      if (cluster.length > 0) {
+        const groupCounts: any = {};
+        cluster.forEach(p => groupCounts[p.group] = (groupCounts[p.group] || 0) + 1);
+        const max = Math.max(...Object.values(groupCounts) as number[]);
+        if (max / cluster.length > 0.8) pureNodes++;
+      }
+    }
+    return { segregationIndex: (pureNodes / k) * 100 };
+  }, [results, k, isRedlining]);
+
   const analysis = useMemo(() => {
-    const avg = results.inertia / POINTS.length;
-    return { label: avg < 80 ? 'Coherent Clusters' : 'Dispersed Points', color: avg < 80 ? 'text-emerald-600' : 'text-amber-600', desc: avg < 80 ? 'Clear internal group coherence found. The structure is stable.' : 'The centroids are far from their data points. Reposition them to achieve spatial balance.' };
-  }, [results.inertia]);
+    if (isRedlining) {
+      if (biasMetrics.segregationIndex > 60) return { label: 'Spatial Segregation', color: 'text-rose-600', desc: 'The algorithm has perfectly mapped spatial distance to demographic groups. This can lead to automated redlining in credit or insurance apps.' };
+      return { label: 'Mixed Distribution', color: 'text-slate-400', desc: 'The clusters overlap multiple demographic groups, indicating a more integrated spatial distribution.' };
+    }
+    const avg = results.inertia / COLORED_POINTS.length;
+    return { label: avg < 80 ? 'Coherent Clusters' : 'Dispersed Points', color: avg < 80 ? 'text-emerald-600' : 'text-amber-600', desc: avg < 80 ? 'Clear internal group coherence found. The structure is stable.' : 'The centroids are far from their data points. Reposition them or run optimization to achieve spatial balance.' };
+  }, [results.inertia, biasMetrics.segregationIndex, isRedlining]);
 
   const handleDrag = (e: MouseEvent | TouchEvent, idx: number) => {
     if (!containerRef.current) return;
@@ -98,9 +155,17 @@ const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, n
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
           <div className={`text-2xl font-serif italic ${analysis.color} transition-colors duration-500`}>{analysis.label}</div>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Total System Inertia</div>
-          <div className="text-2xl font-mono font-bold tabular-nums text-[#121212]">{Math.round(results.inertia).toString().padStart(5, '0')}</div>
+        <div className="text-right flex space-x-12">
+          {isRedlining && (
+            <div className="animate-in slide-in-from-right-4">
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-rose-300 mb-2">Segregation Index</div>
+              <div className="text-2xl font-mono font-bold tabular-nums text-rose-600">{biasMetrics.segregationIndex.toFixed(0)}%</div>
+            </div>
+          )}
+          <div>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">System Inertia</div>
+            <div className="text-2xl font-mono font-bold tabular-nums text-[#121212]">{Math.round(results.inertia).toString().padStart(5, '0')}</div>
+          </div>
         </div>
       </div>
       <div 
@@ -116,57 +181,100 @@ const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, n
               </React.Fragment>
             ))}
           </g>
-          {results.assignments.map(p => <line key={p.id} x1={p.x} y1={p.y} x2={activeCentroids[p.clusterIdx].x} y2={activeCentroids[p.clusterIdx].y} stroke={COLORS[p.clusterIdx]} strokeWidth="1" strokeDasharray="5,5" opacity="0.3" />)}
+          {results.assignments.map(p => <line key={p.id} x1={p.x} y1={p.y} x2={activeCentroids[p.clusterIdx].x} y2={activeCentroids[p.clusterIdx].y} stroke={COLORS[p.clusterIdx]} strokeWidth="1" strokeDasharray="5,5" opacity="0.15" />)}
         </svg>
+
         {results.assignments.map(p => (
           <div 
             key={p.id} 
-            className="absolute w-3 h-3 rotate-45 transition-colors duration-500 shadow-sm" 
+            className="absolute w-3 h-3 rotate-45 transition-all duration-300 shadow-sm" 
             style={{ 
               left: `${(p.x/800)*100}%`, 
               top: `${(p.y/560)*100}%`, 
-              backgroundColor: COLORS[p.clusterIdx], 
-              transform: 'translate(-50%, -50%) rotate(45deg)' 
+              backgroundColor: isRedlining ? (GROUP_COLORS[p.group as keyof typeof GROUP_COLORS]) : COLORS[p.clusterIdx], 
+              transform: 'translate(-50%, -50%) rotate(45deg)',
+              border: isRedlining ? `2px solid ${COLORS[p.clusterIdx]}` : 'none'
             }} 
-          />
+          >
+            {isRedlining && (
+              <div className="absolute inset-[-4px] border border-white/40 rotate-45" />
+            )}
+          </div>
         ))}
+
         {activeCentroids.map((c, i) => (
           <div 
             key={i} 
             onMouseDown={(e) => { 
+              setIsDragging(i);
               const move = (me: any) => handleDrag(me, i); 
               const up = () => { 
+                setIsDragging(null);
                 window.removeEventListener('mousemove', move); 
                 window.removeEventListener('mouseup', up); 
               }; 
               window.addEventListener('mousemove', move); 
               window.addEventListener('mouseup', up); 
             }} 
-            className="absolute w-12 h-12 bg-white border-4 rounded-sm shadow-2xl z-20 flex items-center justify-center cursor-move active:scale-125 transition-transform" 
+            className={`absolute w-12 h-12 bg-white border-4 rounded-sm shadow-2xl z-20 flex items-center justify-center cursor-move active:scale-125 transition-[transform,border-color] duration-200`} 
             style={{ 
               left: `${(c.x/800)*100}%`, 
               top: `${(c.y/560)*100}%`, 
               borderColor: COLORS[i], 
-              transform: 'translate(-50%, -50%)' 
+              transform: 'translate(-50%, -50%)',
+              willChange: 'left, top'
             }}
           >
             <span className="font-mono text-xs font-bold" style={{ color: COLORS[i] }}>#{i+1}</span>
           </div>
         ))}
+
+        {isRedlining && (
+           <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md border border-rose-100 p-4 animate-in slide-in-from-left-4">
+              <span className="text-[9px] font-mono font-bold text-rose-600 uppercase tracking-widest block mb-1">Redlining Visualization</span>
+              <p className="text-[10px] italic font-serif text-slate-500">Center color = Cluster Assignment. Diamond fill = Real Demographic.</p>
+           </div>
+        )}
       </div>
+
+      {/* Controls Area */}
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
         <div className="space-y-8">
-          <div className="flex justify-between items-center mb-1">
-            <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Target Groups (K)</label>
-            <span className="text-[11px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-3 py-1 rounded border border-black/5 shadow-sm">{k} Clusters</span>
-          </div>
-          <input type="range" min="2" max="5" step="1" value={k} onChange={(e) => { setK(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-1 appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" />
+          {isOptimization && (
+            <button 
+              onClick={runConvergenceStep} 
+              className="w-full py-5 bg-[#121212] text-white text-[11px] font-bold uppercase tracking-[0.3em] hover:bg-[#2A4D69] transition-all shadow-xl animate-in fade-in zoom-in"
+            >
+              Step Mean Convergence
+            </button>
+          )}
+
+          {!isRedlining ? (
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Target Groups (K)</label>
+                <span className="text-[11px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-3 py-1 rounded border border-black/5 shadow-sm">{k} Clusters</span>
+              </div>
+              <input type="range" min="2" max="5" step="1" value={k} onChange={(e) => { setK(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-1 appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" />
+            </div>
+          ) : (
+            <div className="bg-[#FDFCFB] border border-black/5 p-6 rounded-sm animate-in slide-in-from-bottom-2">
+               <h5 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#999] mb-2">Clustering as Proxy</h5>
+               <p className="text-[11px] leading-relaxed italic text-[#666]">In this phase, points are colored by their true demographic (A, B, or C). Notice how spatial clusters align with these groups. This is how algorithms can "redline" without ever seeing a race feature.</p>
+            </div>
+          )}
         </div>
         <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex items-center">
           <p className="text-sm text-[#444] italic font-serif leading-relaxed">"{analysis.desc}"</p>
         </div>
       </div>
-      <button onClick={onNext} className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-5 font-bold uppercase tracking-[0.3em] text-xs transition-all shadow-xl ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>Advance Manuscript</button>
+
+      <button onClick={onNext} className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 font-bold uppercase tracking-[0.3em] text-xs transition-all shadow-xl flex items-center justify-center group ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
+        {nextLabel || 'Advance Manuscript'}
+        <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </button>
     </div>
   );
 };

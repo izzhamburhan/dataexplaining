@@ -16,7 +16,20 @@ interface Props {
 const TOUR_STEPS = [
   { message: "Decision Trees split data into subsets. The goal is to reach nodes containing only one class.", position: "top-[20%] left-[30%]" },
   { message: "Switch between X and Y dimensions to see which feature provides the best separation.", position: "bottom-[25%] left-[10%]" },
-  { message: "Adjust the split threshold to maximize 'Purity'. High purity means the model is learning the structure.", position: "bottom-[15%] left-[20%]" }
+  { message: "In Phase 2, observe how a 'pure' split can sometimes target a specific demographic unfairly.", position: "bottom-[15%] left-[20%]" }
+];
+
+const DATA_POINTS = [
+  { x: 50, y: 50, label: 'A', group: 'Minority' }, 
+  { x: 100, y: 120, label: 'A', group: 'Majority' }, 
+  { x: 150, y: 80, label: 'A', group: 'Majority' },
+  { x: 400, y: 350, label: 'B', group: 'Majority' }, 
+  { x: 350, y: 420, label: 'B', group: 'Minority' }, 
+  { x: 450, y: 380, label: 'B', group: 'Majority' },
+  { x: 100, y: 400, label: 'A', group: 'Minority' }, 
+  { x: 400, y: 100, label: 'B', group: 'Majority' },
+  { x: 200, y: 250, label: 'A', group: 'Majority' }, 
+  { x: 300, y: 250, label: 'B', group: 'Minority' }
 ];
 
 const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
@@ -24,6 +37,9 @@ const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInter
   const [feature, setFeature] = useState<'X' | 'Y'>('X');
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
   const [activeTourIndex, setActiveTourIndex] = useState(0);
+
+  const isIntro = currentStep === 0;
+  const isBiasPhase = currentStep === 1;
 
   useEffect(() => {
     if (isTourActive) setActiveTourIndex(0);
@@ -34,8 +50,8 @@ const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInter
   }, [adjustment]);
 
   useEffect(() => {
-    setHasActuallyInteracted(currentStep === 0);
-  }, [currentStep]);
+    setHasActuallyInteracted(isIntro);
+  }, [currentStep, isIntro]);
 
   const markInteraction = () => {
     if (!hasActuallyInteracted) {
@@ -44,31 +60,33 @@ const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInter
     }
   };
 
-  const points = useMemo(() => [
-    { x: 50, y: 50, label: 'A' }, { x: 100, y: 120, label: 'A' }, { x: 150, y: 80, label: 'A' },
-    { x: 400, y: 350, label: 'B' }, { x: 350, y: 420, label: 'B' }, { x: 450, y: 380, label: 'B' },
-    { x: 100, y: 400, label: 'A' }, { x: 400, y: 100, label: 'B' },
-    { x: 200, y: 250, label: 'A' }, { x: 300, y: 250, label: 'B' }
-  ], []);
-
   const { leftLeaf, rightLeaf } = useMemo(() => {
-    const left = points.filter(p => feature === 'X' ? p.x <= splitVal : p.y <= splitVal);
-    const right = points.filter(p => feature === 'X' ? p.x > splitVal : p.y > splitVal);
+    const left = DATA_POINTS.filter(p => feature === 'X' ? p.x <= splitVal : p.y <= splitVal);
+    const right = DATA_POINTS.filter(p => feature === 'X' ? p.x > splitVal : p.y > splitVal);
     return { leftLeaf: left, rightLeaf: right };
-  }, [splitVal, feature, points]);
+  }, [splitVal, feature]);
 
-  const getPurity = (leaf: typeof points) => {
-    if (leaf.length === 0) return 0;
-    const aCount = leaf.filter(p => p.label === 'A').length;
-    return (Math.max(aCount, leaf.length - aCount) / leaf.length) * 100;
-  };
+  const metrics = useMemo(() => {
+    const getPurity = (leaf: typeof DATA_POINTS) => {
+      if (leaf.length === 0) return 0;
+      const aCount = leaf.filter(p => p.label === 'A').length;
+      return (Math.max(aCount, leaf.length - aCount) / leaf.length) * 100;
+    };
 
-  const avgPurity = (getPurity(leftLeaf) + getPurity(rightLeaf)) / 2;
+    const avgPurity = (getPurity(leftLeaf) + getPurity(rightLeaf)) / 2;
+
+    const minorityHired = DATA_POINTS.filter(p => p.group === 'Minority' && (feature === 'X' ? p.x > splitVal : p.y > splitVal)).length;
+    const minorityTotal = DATA_POINTS.filter(p => p.group === 'Minority').length;
+    const disparateImpact = isBiasPhase ? (1 - (minorityHired / minorityTotal)) * 100 : 0;
+
+    return { avgPurity, disparateImpact };
+  }, [leftLeaf, rightLeaf, isBiasPhase, splitVal, feature]);
 
   const analysis = useMemo(() => {
-    if (avgPurity > 90) return { label: 'High Informational Gain', color: 'text-emerald-600', desc: 'The split creates highly pure leaf nodes.' };
-    return { label: 'Suboptimal Split', color: 'text-amber-600', desc: 'The current threshold leaves significant impurity in the nodes.' };
-  }, [avgPurity]);
+    if (isBiasPhase && metrics.disparateImpact > 60) return { label: 'Systemic Bias Detected', color: 'text-rose-600', desc: 'The model is using this feature as a proxy to exclude a specific demographic, regardless of merit.' };
+    if (metrics.avgPurity > 85) return { label: 'High Information Gain', color: 'text-emerald-600', desc: 'The split creates highly pure leaf nodes, maximizing the signal in the data.' };
+    return { label: 'Suboptimal Split', color: 'text-amber-600', desc: 'The current threshold leaves significant impurity in the resulting branches.' };
+  }, [metrics, isBiasPhase]);
 
   const handleTourNext = () => {
     audioService.play('click');
@@ -77,7 +95,7 @@ const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInter
   };
 
   return (
-    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative">
+    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative transition-all duration-700">
       {isTourActive && (
         <GuidanceTooltip 
           message={TOUR_STEPS[activeTourIndex].message}
@@ -87,39 +105,149 @@ const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInter
           isLast={activeTourIndex === TOUR_STEPS.length - 1}
         />
       )}
+
+      {/* Header Info */}
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
           <div className={`text-2xl font-serif italic ${analysis.color} transition-colors duration-500`}>{analysis.label}</div>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Split Purity</div>
-          <div className="text-2xl font-mono font-bold tabular-nums">{avgPurity.toFixed(0).padStart(3, '0')}%</div>
+        <div className="flex space-x-12 text-right">
+          <div>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Node Purity</div>
+            <div className="text-2xl font-mono font-bold tabular-nums">{metrics.avgPurity.toFixed(0)}%</div>
+          </div>
+          {isBiasPhase && (
+            <div className="animate-in slide-in-from-right-4 duration-500">
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-rose-300 mb-2">Disparate Impact</div>
+              <div className="text-2xl font-mono font-bold tabular-nums text-rose-600">{metrics.disparateImpact.toFixed(0)}%</div>
+            </div>
+          )}
         </div>
       </div>
-      <div className="relative w-full h-[300px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12">
-        {points.map((p, i) => (
-          <div key={i} className={`absolute w-2 h-2 rotate-45 border border-white/50 ${p.label === 'A' ? 'bg-[#2A4D69]' : 'bg-[#E11D48]'}`} style={{ left: (p.x / 500) * 100 + '%', top: (p.y / 500) * 100 + '%', transform: 'translate(-50%, -50%) rotate(45deg)' }} />
-        ))}
-        <div className="absolute border-[#2A4D69] transition-all duration-300 pointer-events-none" style={{ left: feature === 'X' ? (splitVal / 500) * 100 + '%' : '0%', top: feature === 'Y' ? (splitVal / 500) * 100 + '%' : '0%', width: feature === 'X' ? '1px' : '100%', height: feature === 'Y' ? '1px' : '100%', borderStyle: 'dashed', borderWidth: feature === 'X' ? '0 0 0 1px' : '1px 0 0 0', opacity: 0.3 }} />
+
+      {/* Main Plot Area */}
+      <div className="relative w-full h-[320px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+        {/* SVG Layer for Grid and Boundary Line */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 500" preserveAspectRatio="none">
+          <g stroke="#F0F0F0" strokeWidth="1">
+             {Array.from({length: 6}).map((_, i) => (
+               <React.Fragment key={i}>
+                 <line x1={i * 100} y1="0" x2={i * 100} y2="500" />
+                 <line x1="0" y1={i * 100} x2="500" y2={i * 100} />
+               </React.Fragment>
+             ))}
+          </g>
+
+          {isBiasPhase && feature === 'Y' && (
+             <rect x="0" y="300" width="500" height="200" fill="#E11D48" fillOpacity="0.05" className="animate-pulse" />
+          )}
+
+          <line 
+            x1={feature === 'X' ? splitVal : 0} 
+            y1={feature === 'Y' ? splitVal : 0} 
+            x2={feature === 'X' ? splitVal : 500} 
+            y2={feature === 'Y' ? splitVal : 500} 
+            stroke="#121212" 
+            strokeWidth="2" 
+            strokeDasharray="8,4" 
+            className="transition-all duration-300 opacity-40"
+          />
+        </svg>
+
+        {/* DOM Layer for Data Points (Diamonds) to prevent stretching */}
+        <div className="absolute inset-0 pointer-events-none">
+          {DATA_POINTS.map((p, i) => (
+            <div 
+              key={i} 
+              className={`absolute w-3 h-3 rotate-45 border border-white/50 shadow-sm transition-all duration-500 ${p.label === 'A' ? 'bg-[#2A4D69]' : 'bg-[#E11D48]'}`} 
+              style={{ 
+                left: `${(p.x / 500) * 100}%`, 
+                top: `${(p.y / 500) * 100}%`, 
+                transform: 'translate(-50%, -50%) rotate(45deg)' 
+              }}
+            >
+              {isBiasPhase && p.group === 'Minority' && (
+                <div className="absolute inset-[-6px] rounded-full border border-[#D4A017] border-dashed animate-spin-slow pointer-events-none" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="absolute top-4 right-4 flex flex-col items-end space-y-2 pointer-events-none bg-white/40 backdrop-blur-[2px] p-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-[8px] font-mono text-[#AAA] uppercase tracking-widest">{isBiasPhase ? 'Approved' : 'Class A'}</span>
+            <div className="w-2 h-2 bg-[#2A4D69] rotate-45" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-[8px] font-mono text-[#AAA] uppercase tracking-widest">{isBiasPhase ? 'Denied' : 'Class B'}</span>
+            <div className="w-2 h-2 bg-[#E11D48] rotate-45" />
+          </div>
+        </div>
+
+        {isBiasPhase && (
+          <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-md border border-rose-100 p-3">
+             <span className="text-[9px] font-mono font-bold text-rose-600 uppercase tracking-widest block mb-1">Protected Status Revealed</span>
+             <p className="text-[10px] italic font-serif text-slate-500">Gold rings indicate candidates from the minority group.</p>
+          </div>
+        )}
       </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
+
+      {/* Controls Area */}
+      <div className={`w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8 transition-all duration-700 ${isIntro ? 'opacity-20 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'}`}>
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => { setFeature('X'); audioService.play('click'); markInteraction(); }} className={`py-3 text-[10px] font-mono font-bold uppercase tracking-widest border ${feature === 'X' ? 'bg-[#121212] text-white' : 'border-black/5 text-[#999]'}`}>Dim. X</button>
-            <button onClick={() => { setFeature('Y'); audioService.play('click'); markInteraction(); }} className={`py-3 text-[10px] font-mono font-bold uppercase tracking-widest border ${feature === 'Y' ? 'bg-[#121212] text-white' : 'border-black/5 text-[#999]'}`}>Dim. Y</button>
+            <button 
+                onClick={() => { setFeature('X'); audioService.play('click'); markInteraction(); }} 
+                className={`py-3 text-[10px] font-mono font-bold uppercase tracking-widest border transition-all ${feature === 'X' ? 'bg-[#121212] text-white border-[#121212]' : 'border-black/5 text-[#999]'}`}
+            >
+                {isBiasPhase ? 'Experience (X)' : 'Feature X'}
+            </button>
+            <button 
+                onClick={() => { setFeature('Y'); audioService.play('click'); markInteraction(); }} 
+                className={`py-3 text-[10px] font-mono font-bold uppercase tracking-widest border transition-all ${feature === 'Y' ? 'bg-[#121212] text-white border-[#121212]' : 'border-black/5 text-[#999]'}`}
+            >
+                {isBiasPhase ? 'Demographic (Y)' : 'Feature Y'}
+            </button>
           </div>
-          <input type="range" min="50" max="450" step="10" value={splitVal} onChange={(e) => { setSplitVal(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
+          <div>
+            <div className="flex justify-between mb-3">
+              <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Split Threshold</label>
+              <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-3 py-1 border border-black/5 rounded shadow-sm">{splitVal} units</span>
+            </div>
+            <input 
+                type="range" min="50" max="450" step="5" value={splitVal} 
+                onChange={(e) => { setSplitVal(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} 
+                className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" 
+            />
+          </div>
         </div>
-        <div className="bg-[#F9F8F6] p-6 border-l-2 border-black/5">
-          <p className="text-xs text-[#444] leading-relaxed italic font-normal">"{analysis.desc}"</p>
+        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex items-center">
+          <p className="text-xs text-[#444] leading-relaxed italic font-serif">"{analysis.desc}"</p>
         </div>
       </div>
-      <div className={`w-full p-8 border-2 border-dashed border-[#A5C9FF]/50 transition-all duration-500 bg-[#F9FBFF]/30 mt-4 ${hasActuallyInteracted ? 'opacity-100' : 'opacity-0'}`}>
-        <button onClick={onNext} className="w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group">
-          {nextLabel || 'Advance Manuscript'}
-        </button>
-      </div>
+
+      {/* Advance Manuscript Button */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+        className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}
+      >
+        {nextLabel || 'Advance Manuscript'}
+        <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </button>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 12s linear infinite;
+          transform-origin: center;
+        }
+      `}} />
     </div>
   );
 };

@@ -113,7 +113,7 @@ const BiasSim: React.FC<Props> = ({ currentStep, adjustment, onInteract, onNext,
             <input type="range" min="0.1" max="0.9" step="0.05" value={genderBias} onChange={(e) => { setGenderBias(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-1 appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-6 h-[320px] overflow-y-auto pr-4 custom-scrollbar">
+          <div className="grid grid-cols-2 gap-6 h-[320px] overflow-y-auto pr-4">
             {candidates.map(c => (
               <div key={c.id} className={`p-6 border text-sm flex justify-between items-center transition-all duration-500 ${showResults && c.status === 'hired' ? 'bg-emerald-50/20 border-emerald-500/30' : 'bg-white border-black/5'}`}>
                 <div className="flex flex-col">
@@ -135,11 +135,6 @@ const BiasSim: React.FC<Props> = ({ currentStep, adjustment, onInteract, onNext,
       <button onClick={onNext} className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-5 font-bold uppercase tracking-[0.3em] text-xs transition-all shadow-xl ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
         {nextLabel || 'Advance Manuscript'}
       </button>
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E5E5; border-radius: 4px; }
-      `}} />
     </div>
   );
 };

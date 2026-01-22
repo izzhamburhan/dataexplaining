@@ -19,6 +19,28 @@
         /* Custom UI Reset for Editorial Style */
         .border-technical { border: 1px solid rgba(0,0,0,0.08); }
         .divider { border-bottom: 0.5px solid rgba(0,0,0,0.06); }
+
+        /* Custom Global Scrollbar Styles */
+        ::-webkit-scrollbar {
+            width: 2px;
+            height: 2px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.2);
+        }
+        
+        /* Firefox Support */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,0,0,0.1) transparent;
+        }
     </style>
 <script type="importmap">
 {

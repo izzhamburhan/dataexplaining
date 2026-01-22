@@ -13,21 +13,27 @@ interface Props {
   onTourClose?: () => void;
 }
 
-const CLUSTER_A = [
-  { x: 150, y: 100, type: 'A' }, { x: 220, y: 150, type: 'A' }, 
-  { x: 130, y: 220, type: 'A' }, { x: 180, y: 300, type: 'A' }, 
-  { x: 280, y: 120, type: 'A' }, { x: 200, y: 50, type: 'A' }
-];
-const CLUSTER_B = [
-  { x: 550, y: 400, type: 'B' }, { x: 620, y: 450, type: 'B' }, 
-  { x: 720, y: 360, type: 'B' }, { x: 580, y: 250, type: 'B' }, 
-  { x: 680, y: 500, type: 'B' }, { x: 500, y: 480, type: 'B' }
+const DATA_POINTS = [
+  // Cluster A (Top Left-ish)
+  { x: 150, y: 100, type: 'A', group: 'Majority' },
+  { x: 220, y: 150, type: 'A', group: 'Majority' },
+  { x: 130, y: 220, type: 'A', group: 'Minority' },
+  { x: 180, y: 300, type: 'A', group: 'Majority' },
+  { x: 280, y: 120, type: 'A', group: 'Majority' },
+  { x: 200, y: 50, type: 'A', group: 'Majority' },
+  // Cluster B (Bottom Right-ish)
+  { x: 550, y: 400, type: 'B', group: 'Majority' },
+  { x: 620, y: 450, type: 'B', group: 'Majority' },
+  { x: 720, y: 360, type: 'B', group: 'Majority' },
+  { x: 580, y: 250, type: 'B', group: 'Minority' },
+  { x: 680, y: 500, type: 'B', group: 'Minority' },
+  { x: 500, y: 480, type: 'B', group: 'Majority' }
 ];
 
 const TOUR_STEPS = [
   { message: "SVMs seek a 'Maximum Margin'—a clear path or 'street' that separates different classes.", position: "top-[20%] left-[30%]" },
   { message: "The points touching the edge of the street are 'Support Vectors'. They are the only points that matter for the boundary.", position: "top-[45%] left-[45%]" },
-  { message: "Rotate the boundary and expand the margin. A wider street means a more confident model.", position: "bottom-[20%] left-[15%]" }
+  { message: "In Phase 2, we reveal how the widest 'street' can sometimes be built on top of demographic redlines.", position: "bottom-[20%] left-[15%]" }
 ];
 
 const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
@@ -35,6 +41,9 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
   const [margin, setMargin] = useState(30);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
   const [activeTourIndex, setActiveTourIndex] = useState(0);
+
+  const isIntro = currentStep === 0;
+  const isBiasPhase = currentStep === 1;
 
   useEffect(() => {
     if (isTourActive) setActiveTourIndex(0);
@@ -45,18 +54,21 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
     if (adjustment?.parameter === 'margin') { setMargin(adjustment.value); markInteraction(); }
   }, [adjustment]);
 
-  useEffect(() => { setHasActuallyInteracted(currentStep === 0); }, [currentStep]);
+  useEffect(() => { 
+    setHasActuallyInteracted(isIntro); 
+  }, [currentStep, isIntro]);
 
   const markInteraction = () => { if (!hasActuallyInteracted) { setHasActuallyInteracted(true); onInteract?.(); } };
 
   const modelMetrics = useMemo(() => {
-    const allPoints = [...CLUSTER_A, ...CLUSTER_B];
     const centerX = 400, centerY = 280;
-    const results = allPoints.map(p => {
+    const results = DATA_POINTS.map(p => {
+      // Equation of line: ax + by + c = 0 where a=slope, b=-1, c=centerY - slope*centerX
       const a = slope, b = -1, c = centerY - slope * centerX;
       const dist = (a * p.x + b * p.y + c) / Math.sqrt(a * a + b * b);
       const absDist = Math.abs(dist);
       const predictedSide = dist > 0 ? 'B' : 'A';
+      
       return { 
         ...p, 
         absDist,
@@ -64,30 +76,36 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
         isSupportVector: Math.abs(absDist - margin) < 15
       };
     });
-    return { results, violations: results.filter(p => p.isViolation).length };
-  }, [slope, margin]);
+
+    // Fairness metric: How many minorities are in the "Denied" (Class B) vs "Approved" (Class A)
+    const minorityPoints = results.filter(p => p.group === 'Minority');
+    const minorityDenied = minorityPoints.filter(p => p.absDist > 0 && (slope * p.x + (centerY - slope * centerX) > p.y)).length;
+    const fairnessRatio = isBiasPhase ? (minorityDenied / Math.max(1, minorityPoints.length)) * 100 : 0;
+
+    return { results, violations: results.filter(p => p.isViolation).length, fairnessRatio };
+  }, [slope, margin, isBiasPhase]);
 
   const analysis = useMemo(() => {
-    if (modelMetrics.violations > 0) {
+    if (isBiasPhase && modelMetrics.fairnessRatio > 60) {
       return { 
-        label: 'Margin Violation', 
+        label: 'Redlining Pattern', 
         color: 'text-rose-600', 
-        desc: 'Points are breaching the street. Reduce the margin width or rotate the angle to find a clearer path.' 
+        desc: 'The algorithm has maximized its margin by perfectly excluding a protected group based on their zip code proxy.' 
       };
     }
-    if (margin >= 45) {
+    if (modelMetrics.violations > 0) {
       return { 
-        label: 'Optimal Separation', 
-        color: 'text-emerald-600', 
-        desc: 'Maximum Margin achieved! You have found a high-confidence boundary with the widest possible safety street.' 
+        label: 'Boundary Conflict', 
+        color: 'text-amber-600', 
+        desc: 'Data points are breaching the street. Adjust the angle to find a clearer separation path.' 
       };
     }
     return { 
-      label: 'Suboptimal Fit', 
-      color: 'text-amber-600', 
-      desc: 'Separated, but the street is too narrow. Increase the margin until you touch the nearest data points (Support Vectors).' 
+      label: 'Optimal Margin', 
+      color: 'text-emerald-600', 
+      desc: 'The widest possible street has been found. This represents the most confident mathematical divider.' 
     };
-  }, [modelMetrics.violations, margin]);
+  }, [modelMetrics.violations, modelMetrics.fairnessRatio, isBiasPhase]);
 
   const handleTourNext = () => {
     audioService.play('click');
@@ -96,7 +114,7 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
   };
 
   return (
-    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-none flex flex-col items-center select-none relative transition-all duration-700">
+    <div className="bg-white p-12 border border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.03)] w-full max-w-4xl flex flex-col items-center select-none relative transition-all duration-700">
       {isTourActive && (
         <GuidanceTooltip 
           message={TOUR_STEPS[activeTourIndex].message}
@@ -107,80 +125,136 @@ const SVMSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
         />
       )}
       
+      {/* Header Info */}
       <div className="w-full flex justify-between items-end mb-10 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
           <div className={`text-2xl font-serif italic ${analysis.color} transition-colors duration-300`}>{analysis.label}</div>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Violations</div>
-          <div className={`text-2xl font-mono font-bold tabular-nums ${modelMetrics.violations > 0 ? 'text-rose-600' : 'text-[#2A4D69]'}`}>
-            {modelMetrics.violations}
+        <div className="flex space-x-12 text-right">
+          <div>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Margin Width</div>
+            <div className="text-2xl font-mono font-bold tabular-nums text-[#121212]">
+              {margin.toString().padStart(3, '0')}
+            </div>
           </div>
+          {isBiasPhase && (
+            <div className="animate-in slide-in-from-right-4 duration-500">
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-rose-300 mb-2">Bias Skew</div>
+              <div className="text-2xl font-mono font-bold tabular-nums text-rose-600">{modelMetrics.fairnessRatio.toFixed(0)}%</div>
+            </div>
+          )}
         </div>
       </div>
       
-      <div className="relative w-full h-[420px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-inner">
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 560" preserveAspectRatio="xMidYMid meet">
+      {/* Main Plot Area */}
+      <div className="relative w-full h-[420px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+        {/* SVG Layer for Grid and Boundary */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 560" preserveAspectRatio="none">
           <g stroke="#F0F0F0" strokeWidth="1">
-            {Array.from({ length: 17 }).map((_, i) => (
+            {Array.from({ length: 9 }).map((_, i) => (
               <React.Fragment key={i}>
-                <line x1={i * 50} y1="0" x2={i * 50} y2="560" />
-                <line x1="0" y1={i * 35} x2="800" y2={i * 35} />
+                <line x1={i * 100} y1="0" x2={i * 100} y2="560" />
+                <line x1="0" y1={i * 70} x2="800" y2={i * 70} />
               </React.Fragment>
             ))}
           </g>
 
           <g transform="translate(400, 280)">
              <g transform={`rotate(${Math.atan(slope) * (180/Math.PI)})`}>
-                <rect x="-3000" y={-margin} width="6000" height={margin * 2} fill="rgba(42, 77, 105, 0.1)" />
-                <line x1="-3000" y1={-margin} x2="3000" y2={-margin} stroke="#AAA" strokeWidth="1" strokeDasharray="6,6" />
-                <line x1="-3000" y1={margin} x2="3000" y2={margin} stroke="#AAA" strokeWidth="1" strokeDasharray="6,6" />
-                <line x1="-3000" y1="0" x2="3000" y2="0" stroke="#121212" strokeWidth="4" />
+                {/* The "Street" Margin */}
+                <rect x="-3000" y={-margin} width="6000" height={margin * 2} fill="rgba(42, 77, 105, 0.05)" className="transition-all duration-300" />
+                <line x1="-3000" y1={-margin} x2="3000" y2={-margin} stroke="#AAA" strokeWidth="1" strokeDasharray="6,6" className="opacity-20" />
+                <line x1="-3000" y1={margin} x2="3000" y2={margin} stroke="#AAA" strokeWidth="1" strokeDasharray="6,6" className="opacity-20" />
+                <line x1="-3000" y1="0" x2="3000" y2="0" stroke="#121212" strokeWidth="2" strokeDasharray="10,5" className="opacity-30" />
              </g>
           </g>
-
-          {modelMetrics.results.map((p, i) => (
-            <g key={i}>
-              {p.isSupportVector && (
-                <circle cx={p.x} cy={p.y} r="22" fill="none" stroke="#D4A017" strokeWidth="2" strokeDasharray="5,3" className="animate-spin-slow" />
-              )}
-              <circle 
-                cx={p.x} 
-                cy={p.y} 
-                r="12" 
-                fill={p.type === 'A' ? "#2A4D69" : "#E11D48"} 
-                className={`transition-all duration-300 ${p.isViolation ? 'animate-pulse ring-8 ring-rose-100' : 'opacity-100'}`} 
-              />
-            </g>
-          ))}
         </svg>
+
+        {/* DOM Layer for Data Points (Diamonds) to prevent stretching */}
+        <div className="absolute inset-0 pointer-events-none">
+          {modelMetrics.results.map((p, i) => (
+            <div 
+              key={i} 
+              className={`absolute w-3 h-3 rotate-45 border border-white/50 shadow-sm transition-all duration-500 ${
+                p.type === 'A' ? 'bg-[#2A4D69]' : 'bg-[#E11D48]'
+              } ${p.isViolation ? 'ring-8 ring-rose-100' : ''}`} 
+              style={{ 
+                left: `${(p.x / 800) * 100}%`, 
+                top: `${(p.y / 560) * 100}%`, 
+                transform: 'translate(-50%, -50%) rotate(45deg)' 
+              }}
+            >
+              {p.isSupportVector && (
+                <div className="absolute inset-[-8px] rounded-full border-2 border-[#D4A017] border-dashed animate-spin-slow" />
+              )}
+              {isBiasPhase && p.group === 'Minority' && (
+                <div className="absolute inset-[-4px] rounded-full border border-rose-400 opacity-60 animate-ping" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Legend / Context Overlay */}
+        <div className="absolute top-4 right-4 flex flex-col items-end space-y-2 pointer-events-none bg-white/40 backdrop-blur-[2px] p-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-[8px] font-mono text-[#AAA] uppercase tracking-widest">{isBiasPhase ? 'Approved' : 'Class A'}</span>
+            <div className="w-2 h-2 bg-[#2A4D69] rotate-45" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-[8px] font-mono text-[#AAA] uppercase tracking-widest">{isBiasPhase ? 'Denied' : 'Class B'}</span>
+            <div className="w-2 h-2 bg-[#E11D48] rotate-45" />
+          </div>
+        </div>
+
+        {isBiasPhase && (
+          <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-md border border-rose-100 p-3 max-w-[200px]">
+             <span className="text-[9px] font-mono font-bold text-rose-600 uppercase tracking-widest block mb-1">Bias Disclosure</span>
+             <p className="text-[10px] italic font-serif text-slate-500">Pulsing indicators mark candidates from a protected class living in "denied" zones.</p>
+          </div>
+        )}
       </div>
 
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
+      {/* Controls Area */}
+      <div className={`w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8 transition-all duration-700 ${isIntro ? 'opacity-20 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'}`}>
         <div className="space-y-10">
           <div>
             <div className="flex justify-between mb-3">
               <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Boundary Angle (θ)</label>
               <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-3 py-1 border border-black/5 rounded shadow-sm">{slope.toFixed(2)}</span>
             </div>
-            <input type="range" min="-2.5" max="2.5" step="0.05" value={slope} onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-1 appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" />
+            <input 
+              type="range" min="-2.5" max="2.5" step="0.05" value={slope} 
+              onChange={(e) => { setSlope(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} 
+              className="w-full h-px appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" 
+            />
           </div>
           <div>
             <div className="flex justify-between mb-3">
-              <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Street Margin</label>
-              <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-3 py-1 border border-black/5 rounded shadow-sm">{margin}px</span>
+              <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Margin Width</label>
+              <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-3 py-1 border border-black/5 rounded shadow-sm">{margin} units</span>
             </div>
-            <input type="range" min="5" max="100" step="1" value={margin} onChange={(e) => { setMargin(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-1 appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" />
+            <input 
+              type="range" min="5" max="80" step="1" value={margin} 
+              onChange={(e) => { setMargin(parseInt(e.target.value)); audioService.play('click'); markInteraction(); }} 
+              className="w-full h-px appearance-none bg-black/10 accent-[#2A4D69] cursor-pointer" 
+            />
           </div>
         </div>
         <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex items-center">
-          <p className="text-sm text-[#444] italic font-serif leading-relaxed">"{analysis.desc}"</p>
+          <p className="text-xs text-[#444] italic font-serif leading-relaxed">"{analysis.desc}"</p>
         </div>
       </div>
       
-      <button onClick={onNext} className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-5 font-bold uppercase tracking-[0.3em] text-xs transition-all shadow-xl ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
+      {/* Advance Manuscript Button */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+        className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 font-bold uppercase tracking-[0.3em] text-xs transition-all shadow-xl flex items-center justify-center group ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}
+      >
         {nextLabel || 'Advance Manuscript'}
+        <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
       </button>
 
       <style dangerouslySetInnerHTML={{ __html: `
