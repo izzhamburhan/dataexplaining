@@ -20,6 +20,7 @@ export interface Lesson {
   category: LessonCategory;
   steps: LessonStep[];
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  icon: React.ReactNode;
 }
 
 export interface DataPoint {

@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Lesson, LessonCategory } from './types';
 
 export const LESSONS: Lesson[] = [
@@ -8,6 +9,15 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'The bedrock of prediction. Learn how to find the "line of best fit".',
     category: LessonCategory.FOUNDATIONS,
     difficulty: 'Beginner',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <circle cx="20" cy="80" r="2" fill="currentColor" />
+        <circle cx="40" cy="70" r="2" fill="currentColor" />
+        <circle cx="60" cy="40" r="2" fill="currentColor" />
+        <circle cx="80" cy="30" r="2" fill="currentColor" />
+        <line x1="10" y1="90" x2="90" y2="20" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Meet the Data',
@@ -34,6 +44,15 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'The engine of ML optimization. Learn how models "climb down" to find the truth.',
     category: LessonCategory.FOUNDATIONS,
     difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <path d="M10,20 Q50,110 90,20" fill="none" stroke="currentColor" strokeWidth="2" />
+        <circle cx="25" cy="40" r="4" fill="#2A4D69">
+          <animate attributeName="cx" values="25;50" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="cy" values="40;65" dur="2s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+    ),
     steps: [
       {
         title: 'The Error Valley',
@@ -54,6 +73,12 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Predict probabilities and classify items using the Sigmoid curve.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Beginner',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <path d="M10,80 C40,80 60,20 90,20" fill="none" stroke="currentColor" strokeWidth="2" />
+        <line x1="10" y1="50" x2="90" y2="50" stroke="currentColor" strokeWidth="1" strokeDasharray="4,4" opacity="0.3" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Yes or No?',
@@ -74,6 +99,16 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Classify items based on who their neighbors are. Simple but powerful.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Beginner',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <circle cx="50" cy="50" r="4" fill="#2A4D69" />
+        <circle cx="35" cy="40" r="2" fill="currentColor" />
+        <circle cx="45" cy="30" r="2" fill="currentColor" />
+        <circle cx="65" cy="45" r="2" fill="#E11D48" />
+        <circle cx="55" cy="65" r="2" fill="#E11D48" />
+        <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Who are your Neighbors?',
@@ -94,6 +129,15 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Learn how to make complex decisions by asking a series of simple questions.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Beginner',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <rect x="45" y="10" width="10" height="10" fill="currentColor" />
+        <line x1="50" y1="20" x2="30" y2="40" stroke="currentColor" strokeWidth="2" />
+        <line x1="50" y1="20" x2="70" y2="40" stroke="currentColor" strokeWidth="2" />
+        <circle cx="30" cy="45" r="5" fill="#2A4D69" />
+        <rect x="65" y="40" width="10" height="10" fill="#E11D48" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Divide and Conquer',
@@ -114,6 +158,19 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'A "Wisdom of the Crowd" approach using dozens of Decision Trees.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <g transform="scale(0.5) translate(25, 25)">
+          <path d="M50 10 L20 60 L80 60 Z" fill="currentColor" />
+        </g>
+        <g transform="scale(0.5) translate(75, 50)">
+          <path d="M50 10 L20 60 L80 60 Z" fill="currentColor" opacity="0.6" />
+        </g>
+        <g transform="scale(0.5) translate(10, 75)">
+          <path d="M50 10 L20 60 L80 60 Z" fill="currentColor" opacity="0.8" />
+        </g>
+      </svg>
+    ),
     steps: [
       {
         title: 'Strength in Numbers',
@@ -134,6 +191,15 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Find the "Maximum Margin" to separate classes with high confidence.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <line x1="20" y1="20" x2="80" y2="80" stroke="currentColor" strokeWidth="2" />
+        <line x1="35" y1="15" x2="95" y2="75" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" opacity="0.3" />
+        <line x1="5" y1="25" x2="65" y2="85" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" opacity="0.3" />
+        <circle cx="20" cy="50" r="3" fill="#2A4D69" />
+        <circle cx="80" cy="50" r="3" fill="#E11D48" />
+      </svg>
+    ),
     steps: [
       {
         title: 'The Great Divider',
@@ -154,6 +220,14 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'How computers "see" images by detecting edges, shapes, and textures.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1" />
+        <rect x="30" y="30" width="20" height="20" fill="#D4A017" opacity="0.4" stroke="#D4A017" strokeWidth="1" />
+        <line x1="20" y1="40" x2="80" y2="40" stroke="currentColor" strokeWidth="0.5" opacity="0.2" />
+        <line x1="40" y1="20" x2="40" y2="80" stroke="currentColor" strokeWidth="0.5" opacity="0.2" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Phase 1: The Sliding Window',
@@ -179,6 +253,15 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Why a "perfect" score on training data can lead to total failure in the real world.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <circle cx="20" cy="40" r="2" fill="currentColor" />
+        <circle cx="40" cy="80" r="2" fill="currentColor" />
+        <circle cx="60" cy="30" r="2" fill="currentColor" />
+        <circle cx="80" cy="70" r="2" fill="currentColor" />
+        <path d="M10,50 L20,40 L40,80 L60,30 L80,70 L90,60" fill="none" stroke="#E11D48" strokeWidth="2" strokeDasharray="2,2" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Phase 1: The Rigid Model',
@@ -199,6 +282,17 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'The building blocks of AI. Learn how weights and activations mimic the brain.',
     category: LessonCategory.SUPERVISED,
     difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <circle cx="20" cy="30" r="4" fill="currentColor" />
+        <circle cx="20" cy="70" r="4" fill="currentColor" />
+        <circle cx="50" cy="50" r="4" fill="currentColor" />
+        <circle cx="80" cy="50" r="4" fill="#2A4D69" />
+        <line x1="24" y1="30" x2="46" y2="48" stroke="currentColor" strokeWidth="1" />
+        <line x1="24" y1="70" x2="46" y2="52" stroke="currentColor" strokeWidth="1" />
+        <line x1="54" y1="50" x2="76" y2="50" stroke="currentColor" strokeWidth="1" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Phase 1: The Synapse',
@@ -224,6 +318,18 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Let the data speak for itself. Group similar items without any labels.',
     category: LessonCategory.UNSUPERVISED,
     difficulty: 'Beginner',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <circle cx="30" cy="30" r="10" fill="#2A4D69" opacity="0.2" />
+        <circle cx="70" cy="70" r="10" fill="#E11D48" opacity="0.2" />
+        <rect x="28" y="28" width="4" height="4" fill="#2A4D69" />
+        <rect x="68" y="68" width="4" height="4" fill="#E11D48" />
+        <circle cx="25" cy="25" r="1" fill="currentColor" />
+        <circle cx="35" cy="35" r="1" fill="currentColor" />
+        <circle cx="65" cy="65" r="1" fill="currentColor" />
+        <circle cx="75" cy="75" r="1" fill="currentColor" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Phase 1: Gravity of Centers',
@@ -249,6 +355,15 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Simplify complex data by projecting it onto the most important directions.',
     category: LessonCategory.UNSUPERVISED,
     difficulty: 'Advanced',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <circle cx="30" cy="70" r="2" fill="currentColor" opacity="0.3" />
+        <circle cx="70" cy="30" r="2" fill="currentColor" opacity="0.3" />
+        <line x1="10" y1="90" x2="90" y2="10" stroke="currentColor" strokeWidth="1" strokeDasharray="4,4" />
+        <circle cx="20" cy="80" r="3" fill="#2A4D69" />
+        <circle cx="80" cy="20" r="3" fill="#2A4D69" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Phase 1: Axis Intuition',
@@ -274,6 +389,14 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Teach an agent to solve problems through trial, error, and rewards.',
     category: LessonCategory.FOUNDATIONS,
     difficulty: 'Advanced',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <rect x="10" y="10" width="80" height="80" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.1" />
+        <rect x="45" y="45" width="10" height="10" fill="currentColor" transform="rotate(45 50 50)" />
+        <path d="M80,20 L85,15 L90,20 L85,25 Z" fill="#D4A017" />
+        <path d="M55,45 Q70,45 80,25" fill="none" stroke="#D4A017" strokeWidth="1" strokeDasharray="2,2" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Phase 1: The Reward Signal',
@@ -299,6 +422,14 @@ export const LESSONS: Lesson[] = [
     shortDescription: 'Understanding how historical prejudices leak into automated decisions.',
     category: LessonCategory.ETHICS,
     difficulty: 'Beginner',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <line x1="20" y1="50" x2="80" y2="70" stroke="currentColor" strokeWidth="2" />
+        <line x1="50" y1="30" x2="50" y2="80" stroke="currentColor" strokeWidth="1" />
+        <circle cx="20" cy="50" r="8" fill="#E11D48" />
+        <circle cx="80" cy="70" r="8" fill="currentColor" />
+      </svg>
+    ),
     steps: [
       {
         title: 'Control the Training Bias',
