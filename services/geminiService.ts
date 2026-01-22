@@ -57,8 +57,9 @@ export const generateModelDescription = async (modelName: string, userContext?: 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     let prompt = `Describe the future real-world application of ${modelName}. 
-    Explain how this mathematical concept (like ${modelName}) solves a grand human problem in a futuristic setting. 
-    Provide at least 2 real application and suggest 1 job that applied it, under 100 words.`;
+    Explain how this mathematical concept (like ${modelName}) solves a grand human problem. 
+    Provide at least 2 real application and suggest 1 job that applied it, under 100 words.
+    Make sure the response is logic with current job marketplace and application that are doable`;
 
     if (userContext) {
       prompt += `\n\nTAILOR THIS DESCRIPTION FOR THE FOLLOWING USER PROFILE:
@@ -86,7 +87,7 @@ export const generateModelImage = async (modelName: string, size: '1K' | '2K' | 
   let prompt = `Visualize the future insight of the application in real world of ${modelName} in roman arts in landscape size`;
   
   if (userContext) {
-    prompt += `. Context: Futuristic ${userContext.industry} setting involving a ${userContext.role}. Style: Epic Roman aesthetic mixed with future technology.`;
+    prompt += `. Context: Futuristic ${userContext.industry} setting involving a ${userContext.role}. Style: Epic Roman aesthetic mixed with future technology Arts.`;
   }
 
   try {
