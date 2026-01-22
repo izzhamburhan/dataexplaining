@@ -156,14 +156,19 @@ export const LESSONS: Lesson[] = [
     difficulty: 'Intermediate',
     steps: [
       {
-        title: 'The Convolution',
-        description: 'Computers use "kernels" or filters to scan an image and find specific patterns like vertical lines.',
-        actionLabel: 'Scan Image'
+        title: 'Phase 1: The Sliding Window',
+        description: 'A CNN "scans" an image using a small matrix called a "Kernel". It multiplies the image by this kernel to highlight patterns like edges.',
+        actionLabel: 'Next: Spatial Abstraction'
       },
       {
-        title: 'Feature Maps',
-        description: 'The result of a scan is a feature map. Sliding the filter pixel by pixel creates an abstract version of the image.',
-        interactiveComponent: 'CNNSimulation',
+        title: 'Phase 2: Information Pooling',
+        description: 'After filtering, models often "pool" or simplify the map. This reduces noise but also loses fine-grained details. Select a "Blur" filter to see info loss.',
+        actionLabel: 'Next: The Texture Proxy'
+      },
+      {
+        title: 'Phase 3: The Texture Proxy',
+        description: 'Algorithmic bias in CNNs often comes from filters being overly sensitive to specific textures (like skin tone or lighting) that act as proxies for race or gender.',
+        interactiveComponent: 'CNNBiasSimulation',
         actionLabel: 'Finish Lesson'
       }
     ]
