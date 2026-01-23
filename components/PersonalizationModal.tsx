@@ -19,11 +19,12 @@ const PersonalizationVisualizer: React.FC<{ data: UserContext }> = ({ data }) =>
            style={{ backgroundImage: 'radial-gradient(#121212 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
       {/* The Identity Sequence Visualization */}
-      <div className="relative w-full h-full z-10 flex items-center justify-center">
+      <div className="relative w-full h-full z-10 flex items-center justify-center bg-[#F0EFED]">
         <img 
-          src="https://github.com/user-attachments/assets/8107962b-cf3f-40e7-81ef-a54d6ef337ea" 
+          src="https://images.unsplash.com/photo-1563906916083-234cf1492acc?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fG1vZGVybiUyMHdhbGxwYXBlcnxlbnwwfHwwfHx8MA%3D%3D" 
           alt="Identity Visualization" 
           className="w-full h-full object-cover opacity-85 grayscale hover:grayscale-0 transition-all duration-1000 mix-blend-multiply"
+          loading="lazy"
           onError={(e) => {
             // Fallback if the asset fails to load
             e.currentTarget.style.display = 'none';
