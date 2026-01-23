@@ -92,14 +92,13 @@ export const generateModelImage = async (modelName: string, size: '1K' | '2K' | 
 
   try {
     const response = await imageAi.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-2.5-flash-image',
       contents: {
         parts: [{ text: prompt }]
       },
       config: {
         imageConfig: {
-          aspectRatio: "16:9",
-          imageSize: size
+          aspectRatio: "16:9"
         }
       }
     });
@@ -115,9 +114,6 @@ export const generateModelImage = async (modelName: string, size: '1K' | '2K' | 
     throw new Error("No image data found in response");
   } catch (error: any) {
     console.error("Image Generation Error:", error);
-    if (error.message?.includes("Requested entity was not found")) {
-      throw new Error("API_KEY_ERROR");
-    }
     throw error;
   }
 };

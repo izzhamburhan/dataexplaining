@@ -22,14 +22,6 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
     audioService.play('blip');
 
     try {
-      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        setError("API_KEY_REQUIRED");
-        setIsLoading(false);
-        return;
-      }
-
-      // Hardcoded to 1K as requested
       const [url, desc] = await Promise.all([
         generateModelImage(modelName, '1K', userContext),
         generateModelDescription(modelName, userContext)
@@ -40,20 +32,10 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
       audioService.play('success');
     } catch (err: any) {
       console.error("handleGenerate error:", err);
-      if (err.message === "API_KEY_ERROR") {
-        setError("API_KEY_REQUIRED");
-      } else {
-        setError("Failed to visualize. Please check your project billing or try again.");
-      }
+      setError("Failed to visualize. Please try again later.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const openKeyPicker = async () => {
-    await (window as any).aistudio.openSelectKey();
-    setError(null);
-    handleGenerate();
   };
 
   const renderFormattedText = (text: string | null) => {
@@ -91,11 +73,6 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
               </span>
             )}
           </div>
-          <div className="flex items-center">
-            <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-widest">
-              Standard Fidelity (1K)
-            </span>
-          </div>
         </div>
 
         <button
@@ -121,18 +98,7 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
           )}
         </button>
 
-        {error === "API_KEY_REQUIRED" && (
-          <div className="p-4 bg-rose-50 border border-rose-100 rounded">
-            <p className="text-[10px] text-rose-700 font-medium leading-relaxed mb-3">
-              Requires a paid Gemini API key. <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline">Docs</a>
-            </p>
-            <button onClick={openKeyPicker} className="w-full py-2 bg-rose-600 text-white text-[9px] font-bold uppercase tracking-widest hover:bg-rose-700">
-              Select API Key
-            </button>
-          </div>
-        )}
-
-        {error && error !== "API_KEY_REQUIRED" && (
+        {error && (
           <p className="text-[10px] text-rose-600 italic animate-in fade-in duration-300">{error}</p>
         )}
 
@@ -205,16 +171,16 @@ const ImageGenerator: React.FC<Props> = ({ modelName, userContext }) => {
                 </div>
               </div>
 
-              {/* RESTORED FIXED FOOTER */}
+              {/* FIXED FOOTER */}
               <div className="p-8 md:px-12 md:py-8 shrink-0 bg-[#F9F8F6] border-t border-black/5">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="font-mono text-[7px] text-[#BBB] uppercase tracking-widest mb-1">Asset Fidelity</span>
-                    <span className="font-mono text-[10px] font-bold text-[#121212]">Neural Render (1K)</span>
+                    <span className="font-mono text-[10px] font-bold text-[#121212]">Neural Render</span>
                   </div>
                   <div className="flex flex-col text-right">
                     <span className="font-mono text-[7px] text-[#BBB] uppercase tracking-widest mb-1">Aethelgard Engine</span>
-                    <span className="font-mono text-[10px] font-bold text-[#2A4D69]">Gemini 3 Pro</span>
+                    <span className="font-mono text-[10px] font-bold text-[#2A4D69]">Gemini 2.5 Flash</span>
                   </div>
                 </div>
               </div>
