@@ -7,6 +7,7 @@ import RegressionSim from './components/RegressionSim';
 import BiasSim from './components/BiasSim';
 import OverfittingSim from './components/OverfittingSim';
 import ClusteringSim from './components/ClusteringSim';
+import KModesSim from './components/KModesSim';
 import KNNSim from './components/KNNSim';
 import DecisionTreeSim from './components/DecisionTreeSim';
 import SVMSim from './components/SVMSim';
@@ -113,7 +114,7 @@ const App: React.FC = () => {
   const [aiData, setAiData] = useState<AiResponse | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
-  const [activeAdjustment, setActiveAdjustment] = useState<{ parameter: string; value: number } | null>(null);
+  const [activeAdjustment, setActiveAdjustment] = useState<{ parameter: string; value: number; id: number } | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isTourActive, setIsTourActive] = useState(false);
 
@@ -203,16 +204,25 @@ const App: React.FC = () => {
     audioService.play('blip');
     setIsAiLoading(true);
     setShowAiHelper(true);
-    const params = ['slope', 'intercept', 'lr', 'threshold', 'bias', 'k', 'splitVal', 'complexity', 'w1', 'w2', 'angle', 'genderBias'];
+    
+    // Explicit list of parameters the AI can suggest for any given simulation
+    const params = [
+        'slope', 'intercept', 'lr', 'threshold', 'bias', 'k', 
+        'splitVal', 'complexity', 'w1', 'w2', 'angle', 'genderBias',
+        'riskTolerance', 'biasSkew', 'activeProxy', 'margin'
+    ];
+
     const data = await getGeminiExplanation(activeLesson.title, step.description, params);
     setAiData(data);
     setIsAiLoading(false);
   };
 
   const applyAdjustment = (param: string, val: number) => {
+    audioService.play('click');
     handleInteract();
-    setActiveAdjustment({ parameter: param, value: val });
-    setTimeout(() => setActiveAdjustment(null), 100);
+    // Use an ID (timestamp) to ensure the prop change is detected even if value is identical
+    setActiveAdjustment({ parameter: param, value: val, id: Date.now() });
+    setTimeout(() => setActiveAdjustment(null), 300);
   };
 
   const startLesson = (lesson: Lesson) => {
@@ -431,6 +441,7 @@ const App: React.FC = () => {
                   {activeLesson.id === 'overfitting' && <OverfittingSim {...commonProps} />}
                   {activeLesson.id === 'neural-networks' && <NeuralNetSim {...commonProps} />}
                   {activeLesson.id === 'clustering' && <ClusteringSim {...commonProps} />}
+                  {activeLesson.id === 'k-modes' && <KModesSim {...commonProps} />}
                   {activeLesson.id === 'pca' && <PCASim {...commonProps} />}
                   {activeLesson.id === 'reinforcement-learning' && <ReinforcementSim {...commonProps} />}
                   {activeLesson.id === 'algorithmic-bias' && <BiasSim {...commonProps} />}

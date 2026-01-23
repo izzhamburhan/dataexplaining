@@ -410,6 +410,35 @@ export const LESSONS: Lesson[] = [
     ]
   },
   {
+    id: 'k-modes',
+    title: 'K-Modes Clustering',
+    shortDescription: 'Cluster categorical data where "averages" don\'t exist. Perfect for tags and colors.',
+    category: LessonCategory.UNSUPERVISED,
+    difficulty: 'Intermediate',
+    icon: (
+      <svg viewBox="0 0 100 100" className="w-full h-full opacity-80">
+        <rect x="20" y="20" width="15" height="15" fill="#2A4D69" />
+        <circle cx="75" cy="25" r="8" fill="#E11D48" />
+        <path d="M50 60 L60 80 L40 80 Z" fill="#D4A017" />
+        <rect x="20" y="70" width="10" height="10" fill="#2A4D69" opacity="0.4" />
+        <rect x="35" y="75" width="10" height="10" fill="#2A4D69" opacity="0.4" />
+      </svg>
+    ),
+    steps: [
+      {
+        title: 'Beyond the Mean',
+        description: 'K-Means uses "Mean" (averages), but you can\'t average "Blue" and "Red". K-Modes looks for the "Mode" - the most frequent value.',
+        actionLabel: 'Assign to Modes'
+      },
+      {
+        title: 'Categorical Matching',
+        description: 'We measure distance using the "Hamming Distance" - simply counting how many attributes are different. Assign items to their most similar mode.',
+        interactiveComponent: 'KModesSimulation',
+        actionLabel: 'Finish Lesson'
+      }
+    ]
+  },
+  {
     id: 'pca',
     title: 'PCA (Principal Components)',
     shortDescription: 'Simplify complex data by projecting it onto the most important directions.',

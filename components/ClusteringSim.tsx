@@ -20,6 +20,7 @@ interface Props {
   nextLabel?: string;
   isTourActive?: boolean;
   onTourClose?: () => void;
+  adjustment?: { parameter: string; value: number; id: number } | null;
 }
 
 const TOUR_STEPS = [
@@ -28,7 +29,7 @@ const TOUR_STEPS = [
   { message: "In Phase 3, notice how spatial clustering often reinforces existing demographic boundaries.", position: "bottom-[15%] left-[20%]" }
 ];
 
-const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose }) => {
+const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, nextLabel, isTourActive, onTourClose, adjustment }) => {
   const [k, setK] = useState(3);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
   const [centroids, setCentroids] = useState(() => Array.from({ length: 5 }, (_, i) => ({ x: 150 + i * 150, y: 250 + (i % 2) * 100 })));
@@ -48,6 +49,13 @@ const ClusteringSim: React.FC<Props> = ({ currentStep = 0, onInteract, onNext, n
       setK(3); // Fix K for Redlining explanation
     }
   }, [currentStep, isFoundation, isRedlining]);
+
+  useEffect(() => {
+    if (adjustment?.parameter === 'k') {
+      setK(Math.max(2, Math.min(5, Math.round(adjustment.value))));
+      markInteraction();
+    }
+  }, [adjustment?.id]);
 
   const markInteraction = () => { if (!hasActuallyInteracted) { setHasActuallyInteracted(true); onInteract?.(); } };
 
