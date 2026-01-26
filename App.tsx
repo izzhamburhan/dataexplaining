@@ -119,6 +119,7 @@ const App: React.FC = () => {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isTourActive, setIsTourActive] = useState(false);
   const [isLiveLabActive, setIsLiveLabActive] = useState(false);
+  const [showBriefingNudge, setShowBriefingNudge] = useState(false);
 
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<LessonCategory | null>(null);
@@ -169,6 +170,12 @@ const App: React.FC = () => {
     setAiData(null);
     setShowAiHelper(false);
     setIsLiveLabActive(false);
+    
+    if (activeLesson) {
+      setShowBriefingNudge(true);
+      const timer = setTimeout(() => setShowBriefingNudge(false), 3000);
+      return () => clearTimeout(timer);
+    }
   }, [activeLesson?.id]);
 
   useEffect(() => {
@@ -252,6 +259,7 @@ const App: React.FC = () => {
   const startTour = () => {
     audioService.play('blip');
     setIsTourActive(true);
+    setShowBriefingNudge(false);
   };
 
   const toggleDifficulty = (lvl: string) => {
@@ -298,9 +306,19 @@ const App: React.FC = () => {
         {!activeLesson ? (
           <div className="w-full overflow-y-auto">
             <div className="max-w-6xl mx-auto px-8 py-12">
-              <header className="mb-12 border-l border-black/10 pl-10 max-w-4xl">
-                <h1 className="text-5xl font-serif italic mb-4 leading-tight">An Interactive <br/>Compendium of Models.</h1>
-                <p className="text-base text-[#666] leading-relaxed max-w-xl">A visual curriculum dedicated to the mathematical intuition behind modern algorithms.</p>
+              <header className="mb-12 border-l border-black/10 pl-10 max-w-4xl relative overflow-hidden">
+                {/* Border Animation */}
+                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-[#121212] origin-top animate-[scaleY_1.2s_ease-out_forwards]" />
+                
+                <div className="overflow-hidden">
+                  <h1 className="text-5xl font-serif italic mb-4 leading-tight animate-[slideUpFade_0.8s_ease-out_0.2s_both]">
+                    An Interactive <br/>Compendium of Models.
+                  </h1>
+                </div>
+                
+                <p className="text-base text-[#666] leading-relaxed max-w-xl animate-[fadeIn_1s_ease-out_0.6s_both]">
+                  A visual curriculum dedicated to the mathematical intuition behind modern algorithms.
+                </p>
               </header>
 
               <div className="mb-12 ml-10 flex flex-wrap items-center gap-x-8 gap-y-4 text-[9px] font-mono font-bold uppercase tracking-[0.2em] border-t border-b border-black/5 py-6">
@@ -363,7 +381,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="flex w-full overflow-hidden">
-            <aside className="w-56 border-r border-black/5 bg-[#F9F8F6] shrink-0 p-5 flex flex-col">
+            <aside className="w-56 border-r border-black/5 bg-[#F9F8F6] shrink-0 p-5 flex flex-col relative">
               <button onClick={() => setActiveLesson(null)} className="mb-6 text-[8px] font-bold uppercase tracking-[0.3em] text-[#999] hover:text-[#121212] flex items-center">
                 <svg className="w-2.5 h-2.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
                 Library Home
@@ -381,9 +399,18 @@ const App: React.FC = () => {
                 ))}
               </div>
               
-              <div className="mt-6 pt-6 border-t border-black/5 space-y-3">
+              <div className="mt-6 pt-6 border-t border-black/5 space-y-3 relative">
+                {/* Briefing Nudge Popup */}
+                {showBriefingNudge && (
+                  <div className="absolute -top-12 left-0 right-0 bg-[#2A4D69] text-white p-2 text-[9px] font-bold uppercase tracking-widest text-center animate-bounce shadow-xl z-[200]">
+                    Click here for tutorial/step by step
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2A4D69] rotate-45" />
+                  </div>
+                )}
+
                 <button 
                   onClick={startTour}
+                  title="Begin a guided walkthrough of this manuscript's interactive features."
                   className="w-full flex items-center justify-between p-3 bg-[#D4A017]/5 border border-[#D4A017]/20 hover:bg-[#D4A017]/10 transition-all group"
                 >
                   <span className="text-[9px] font-bold uppercase tracking-widest text-[#856404]">Start Briefing</span>
@@ -392,6 +419,7 @@ const App: React.FC = () => {
                 
                 <button 
                   onClick={() => setIsLiveLabActive(true)}
+                  title="Engage in real-time voice discourse with the Research Assistant."
                   className="w-full flex items-center justify-between p-3 bg-[#2A4D69]/5 border border-[#2A4D69]/20 hover:bg-[#2A4D69]/10 transition-all group"
                 >
                   <span className="text-[9px] font-bold uppercase tracking-widest text-[#2A4D69]">Voice Laboratory</span>
@@ -509,6 +537,24 @@ const App: React.FC = () => {
           0% { transform: translateX(-100%); }
           50% { transform: translateX(100%); }
           100% { transform: translateX(-100%); }
+        }
+        @keyframes scaleY {
+          from { transform: scaleY(0); }
+          to { transform: scaleY(1); }
+        }
+        @keyframes slideUpFade {
+          from { 
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to { 
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}} />
     </div>
