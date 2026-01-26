@@ -1,5 +1,7 @@
 {
   "name": "Dataxplaining",
   "description": "An interactive learning platform for Data Science and Machine Learning concepts, inspired by Hacksplaining. Learn complex models through simple, hands-on simulations.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

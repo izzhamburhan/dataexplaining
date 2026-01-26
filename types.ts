@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 export enum LessonCategory {
   FOUNDATIONS = 'Foundations',
   SUPERVISED = 'Supervised Learning',

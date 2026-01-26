@@ -21,6 +21,7 @@ import ReinforcementSim from './components/ReinforcementSim';
 import AiChatbot from './components/AiChatbot';
 import ImageGenerator from './components/ImageGenerator';
 import PersonalizationModal from './components/PersonalizationModal';
+import LiveVoiceSession from './components/LiveVoiceSession';
 import { getGeminiExplanation, getRecommendedModel } from './services/geminiService';
 import { audioService } from './services/audioService';
 
@@ -101,7 +102,7 @@ const Footer: React.FC<{ onOpenInfo: (type: 'about' | 'contact') => void }> = ({
         </button>
       </div>
       <div className="flex items-center space-x-2">
-        <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">Platform Protocol v1.4.2</span>
+        <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">Platform Protocol v1.5.0</span>
       </div>
     </div>
   </footer>
@@ -117,6 +118,7 @@ const App: React.FC = () => {
   const [activeAdjustment, setActiveAdjustment] = useState<{ parameter: string; value: number; id: number } | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isTourActive, setIsTourActive] = useState(false);
+  const [isLiveLabActive, setIsLiveLabActive] = useState(false);
 
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<LessonCategory | null>(null);
@@ -166,6 +168,7 @@ const App: React.FC = () => {
   useEffect(() => {
     setAiData(null);
     setShowAiHelper(false);
+    setIsLiveLabActive(false);
   }, [activeLesson?.id]);
 
   useEffect(() => {
@@ -205,7 +208,6 @@ const App: React.FC = () => {
     setIsAiLoading(true);
     setShowAiHelper(true);
     
-    // Explicit list of parameters the AI can suggest for any given simulation
     const params = [
         'slope', 'intercept', 'lr', 'threshold', 'bias', 'k', 
         'splitVal', 'complexity', 'w1', 'w2', 'angle', 'genderBias',
@@ -220,7 +222,6 @@ const App: React.FC = () => {
   const applyAdjustment = (param: string, val: number) => {
     audioService.play('click');
     handleInteract();
-    // Use an ID (timestamp) to ensure the prop change is detected even if value is identical
     setActiveAdjustment({ parameter: param, value: val, id: Date.now() });
     setTimeout(() => setActiveAdjustment(null), 300);
   };
@@ -379,13 +380,22 @@ const App: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <div className="mt-6 pt-6 border-t border-black/5">
+              
+              <div className="mt-6 pt-6 border-t border-black/5 space-y-3">
                 <button 
                   onClick={startTour}
                   className="w-full flex items-center justify-between p-3 bg-[#D4A017]/5 border border-[#D4A017]/20 hover:bg-[#D4A017]/10 transition-all group"
                 >
                   <span className="text-[9px] font-bold uppercase tracking-widest text-[#856404]">Start Briefing</span>
                   <div className="w-2 h-2 bg-[#D4A017] rounded-full animate-pulse group-hover:scale-125 transition-transform" />
+                </button>
+                
+                <button 
+                  onClick={() => setIsLiveLabActive(true)}
+                  className="w-full flex items-center justify-between p-3 bg-[#2A4D69]/5 border border-[#2A4D69]/20 hover:bg-[#2A4D69]/10 transition-all group"
+                >
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#2A4D69]">Voice Laboratory</span>
+                  <svg className="w-3 h-3 text-[#2A4D69] group-hover:scale-125 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                 </button>
               </div>
             </aside>
@@ -399,26 +409,48 @@ const App: React.FC = () => {
                     <div className="w-8 h-px bg-[#2A4D69]"></div>
                   </div>
                   <p className="text-[#333] text-[13px] leading-relaxed mb-6 italic">{step?.description}</p>
-                  <button onClick={askAi} className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#666] hover:text-[#2A4D69] flex items-center">
-                    Consult References
-                    {isAiLoading && <span className="ml-1.5 animate-pulse">...</span>}
+                  
+                  <button onClick={askAi} className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#666] hover:text-[#2A4D69] flex items-center group">
+                    Consult Deep Reasoning References
+                    {isAiLoading ? (
+                       <div className="ml-3 flex space-x-1">
+                          <div className="w-1 h-1 bg-[#2A4D69] animate-bounce" />
+                          <div className="w-1 h-1 bg-[#2A4D69] animate-bounce [animation-delay:-0.1s]" />
+                          <div className="w-1 h-1 bg-[#2A4D69] animate-bounce [animation-delay:-0.2s]" />
+                       </div>
+                    ) : (
+                      <svg className="ml-2 w-2 h-2 opacity-40 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" /></svg>
+                    )}
                   </button>
+                  
                   {showAiHelper && aiData && (
-                    <div className="mt-3 bg-[#F9F8F6] p-4 text-[11px] italic border-l border-[#2A4D69] space-y-2">
-                      <p>"{aiData.explanation}"</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {Array.isArray(aiData.suggestions) ? aiData.suggestions.map((s, idx) => (
-                          <button key={idx} onClick={() => applyAdjustment(s.parameter, s.value)} className="px-1.5 py-0.5 bg-white border border-black/5 text-[7px] font-bold uppercase tracking-widest text-[#2A4D69] hover:bg-[#2A4D69] hover:text-white transition-all">
-                            {s.label}
-                          </button>
-                        )) : (
-                          <button onClick={() => applyAdjustment((aiData.suggestions as any).parameter, (aiData.suggestions as any).value)} className="px-1.5 py-0.5 bg-white border border-black/5 text-[7px] font-bold uppercase tracking-widest text-[#2A4D69] hover:bg-[#2A4D69] hover:text-white transition-all">
-                            {(aiData.suggestions as any).label}
-                          </button>
-                        )}
-                      </div>
+                    <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                       {isAiLoading && (
+                          <div className="mb-4 bg-[#F9F8F6] p-4 border border-black/5">
+                            <span className="font-mono text-[7px] text-[#CCC] uppercase tracking-widest block mb-2">Neural Processing</span>
+                            <div className="h-1 bg-black/5 rounded-full overflow-hidden">
+                               <div className="h-full bg-[#2A4D69] animate-[loading_3s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                            </div>
+                          </div>
+                       )}
+                       <div className="bg-[#F9F8F6] p-4 text-[11px] italic border-l-2 border-[#2A4D69] space-y-4 shadow-sm">
+                          <p className="leading-relaxed">"{aiData.explanation}"</p>
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-black/5">
+                            <span className="w-full text-[7px] font-mono text-[#AAA] uppercase tracking-widest">Suggested Calibrations:</span>
+                            {Array.isArray(aiData.suggestions) ? aiData.suggestions.map((s, idx) => (
+                              <button key={idx} onClick={() => applyAdjustment(s.parameter, s.value)} className="px-2 py-1 bg-white border border-black/10 text-[7px] font-bold uppercase tracking-widest text-[#2A4D69] hover:bg-[#2A4D69] hover:text-white transition-all shadow-sm">
+                                {s.label}
+                              </button>
+                            )) : (
+                              <button onClick={() => applyAdjustment((aiData.suggestions as any).parameter, (aiData.suggestions as any).value)} className="px-2 py-1 bg-white border border-black/10 text-[7px] font-bold uppercase tracking-widest text-[#2A4D69] hover:bg-[#2A4D69] hover:text-white transition-all shadow-sm">
+                                {(aiData.suggestions as any).label}
+                              </button>
+                            )}
+                          </div>
+                       </div>
                     </div>
                   )}
+                  
                   {activeLesson && <ImageGenerator modelName={activeLesson.title} userContext={activeUserContext} />}
                 </div>
                 <div className="mt-8 pt-4 border-t border-black/5 text-[7px] font-mono text-[#CCC] uppercase tracking-widest flex justify-between shrink-0">
@@ -428,7 +460,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex-grow flex flex-col items-center p-8 bg-[#FDFCFB] overflow-y-auto">
+            <div className="flex-grow flex flex-col items-center p-8 bg-[#FDFCFB] overflow-y-auto relative">
                <div className="w-full max-w-5xl transition-all duration-700">
                   {activeLesson.id === 'linear-regression' && <RegressionSim {...commonProps} showError={currentStep >= 2} />}
                   {activeLesson.id === 'gradient-descent' && <GradientDescentSim {...commonProps} />}
@@ -446,6 +478,13 @@ const App: React.FC = () => {
                   {activeLesson.id === 'reinforcement-learning' && <ReinforcementSim {...commonProps} />}
                   {activeLesson.id === 'algorithmic-bias' && <BiasSim {...commonProps} />}
                </div>
+               
+               {/* Global Waveform Overlay for Live Sessions */}
+               <LiveVoiceSession 
+                 activeLessonTitle={activeLesson.title} 
+                 isActive={isLiveLabActive} 
+                 onClose={() => setIsLiveLabActive(false)} 
+               />
             </div>
           </div>
         )}
@@ -464,6 +503,14 @@ const App: React.FC = () => {
         type={infoModalType} 
         onClose={() => setInfoModalType(null)} 
       />
+      
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes loading {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+      `}} />
     </div>
   );
 };

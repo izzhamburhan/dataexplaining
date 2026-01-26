@@ -1,21 +1,23 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { UserContext } from "../types";
 
 export const getGeminiExplanation = async (topic: string, context: string, params: string[]) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: `You are a friendly Data Science tutor. 
-      Explain the concept of "${topic}" in the context of "${context}" to a beginner. 
-      Use a simple analogy and keep it under 80 words.
+      Analyze the concept of "${topic}" in the context of "${context}" for a beginner. 
+      Perform a deep reasoning analysis on why this concept matters and how parameters interact.
+      Use a simple analogy and keep the final explanation under 100 words.
       
       Additionally, suggest 1-2 interactive adjustments the user can make to the simulation to better understand the concept.
       Available parameters for this simulation are: ${params.join(', ')}.
       
       Return the response in JSON format.`,
       config: {
+        thinkingConfig: { thinkingBudget: 16000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -29,9 +31,9 @@ export const getGeminiExplanation = async (topic: string, context: string, param
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  label: { type: Type.STRING, description: "A short, descriptive label for the button (e.g., 'Try High Learning Rate')." },
-                  parameter: { type: Type.STRING, description: "The specific parameter key to adjust (must be from the provided list)." },
-                  value: { type: Type.NUMBER, description: "The numeric value to set for this parameter." }
+                  label: { type: Type.STRING, description: "A short, descriptive label for the button." },
+                  parameter: { type: Type.STRING, description: "The specific parameter key to adjust." },
+                  value: { type: Type.NUMBER, description: "The numeric value to set." }
                 },
                 required: ["label", "parameter", "value"]
               }
@@ -160,4 +162,54 @@ export const createChatSession = () => {
       systemInstruction: 'You are "DataAI", a world-class Data Science and Machine Learning tutor for the "Dataxplaining" platform. Your goal is to help users understand complex concepts like Linear Regression, Overfitting, Neural Networks, and Reinforcement Learning using simple language and intuitive analogies. Be concise, encouraging, and clear.',
     },
   });
+};
+
+/**
+ * Generates a multi-speaker audio debate about the ethical implications of a machine learning topic.
+ * Uses the gemini-2.5-flash-preview-tts model with multiple speaker configurations.
+ */
+export const generateEthicsDebateAudio = async (topic: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const prompt = `Generate a short, insightful debate between two experts, Alex and Sam, about the ethical implications of ${topic}.
+      Alex: Argues for the benefits and innovation.
+      Sam: Points out the potential biases and societal risks.
+      The conversation should be concise, under 60 words total.
+      Alex: (Statement)
+      Sam: (Response)`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          multiSpeakerVoiceConfig: {
+            speakerVoiceConfigs: [
+              {
+                speaker: 'Alex',
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: 'Kore' }
+                }
+              },
+              {
+                speaker: 'Sam',
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: 'Puck' }
+                }
+              }
+            ]
+          }
+        }
+      }
+    });
+
+    // The audio bytes returned by the API is raw PCM data in candidates[0].content.parts[0].inlineData.data
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return base64Audio;
+  } catch (error) {
+    console.error("Ethics Debate Audio Generation Error:", error);
+    return null;
+  }
 };
