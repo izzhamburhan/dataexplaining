@@ -97,7 +97,77 @@ const DecisionTreeSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInter
         <div className="flex space-x-12 text-right"><div><div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Node Purity</div><div className="text-2xl font-mono font-bold tabular-nums">{metrics.avgPurity.toFixed(0)}%</div></div>{isBiasPhase && <div className="animate-in slide-in-from-right-4 duration-500"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-rose-300 mb-2">Disparate Impact</div><div className="text-2xl font-mono font-bold tabular-nums text-rose-600">{metrics.disparateImpact.toFixed(0)}%</div></div>}</div>
       </div>
       <div className="relative w-full h-[320px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 500" preserveAspectRatio="none"><g stroke="#F0F0F0" strokeWidth="1">{Array.from({length: 6}).map((_, i) => <React.Fragment key={i}><line x1={i * 100} y1="0" x2={i * 100} y2="500" /><line x1="0" y1={i * 100} x2="500" y2={i * 100} /></React.Fragment>)}</g>{isBiasPhase && feature === 'Y' && <rect x="0" y="300" width="500" height="200" fill="#E11D48" fillOpacity="0.05" className="animate-pulse" />}<line x1={feature === 'X' ? splitVal : 0} y1={feature === 'Y' ? splitVal : 0} x2={feature === 'X' ? splitVal : 500} y2={feature === 'Y' ? splitVal : 500} stroke="#121212" strokeWidth="2" strokeDasharray="8,4" className="transition-all duration-300 opacity-40" /></svg>
+        
+        {/* Color Legend */}
+        <div className="absolute top-4 right-4 z-30 bg-white/90 backdrop-blur-sm border border-black/5 p-3 flex flex-col space-y-2 shadow-sm pointer-events-none">
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 bg-[#2A4D69] rotate-45 border border-white/50" />
+            <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#666]">Class Alpha</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 bg-[#E11D48] rotate-45 border border-white/50" />
+            <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#666]">Class Beta</span>
+          </div>
+        </div>
+
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 500" preserveAspectRatio="none">
+          <g stroke="#F0F0F0" strokeWidth="1">
+            {Array.from({length: 6}).map((_, i) => <React.Fragment key={i}>
+              <line x1={i * 100} y1="0" x2={i * 100} y2="500" />
+              <line x1="0" y1={i * 100} x2="500" y2={i * 100} />
+            </React.Fragment>)}
+          </g>
+          {isBiasPhase && feature === 'Y' && <rect x="0" y="300" width="500" height="200" fill="#E11D48" fillOpacity="0.05" className="animate-pulse" />}
+          
+          {/* Split Line */}
+          <line 
+            x1={feature === 'X' ? splitVal : 0} 
+            y1={feature === 'Y' ? splitVal : 0} 
+            x2={feature === 'X' ? splitVal : 500} 
+            y2={feature === 'Y' ? splitVal : 500} 
+            stroke="#121212" 
+            strokeWidth="2" 
+            strokeDasharray="8,4" 
+            className="transition-all duration-300 opacity-40" 
+          />
+
+          {/* Threshold Label */}
+          <text
+            x={feature === 'X' ? splitVal + 10 : 10}
+            y={feature === 'Y' ? splitVal - 10 : 20}
+            className="font-mono text-[10px] font-bold fill-[#121212] opacity-50 select-none transition-all duration-300"
+          >
+            Threshold: {splitVal}
+          </text>
+
+          {/* Region Labels */}
+          <text
+            x={feature === 'X' ? (splitVal / 2) : 250}
+            y={feature === 'Y' ? (splitVal / 2) : 480}
+            textAnchor="middle"
+            className="font-mono text-[8px] font-bold uppercase tracking-widest fill-[#CCC] select-none transition-all duration-300"
+          >
+            {feature === 'X' ? `X ≤ ${splitVal}` : `Y ≤ ${splitVal}`}
+          </text>
+          <text
+            x={feature === 'X' ? (splitVal + (500 - splitVal) / 2) : 250}
+            y={feature === 'Y' ? (splitVal + (500 - splitVal) / 2) : 20}
+            textAnchor="middle"
+            className="font-mono text-[8px] font-bold uppercase tracking-widest fill-[#CCC] select-none transition-all duration-300"
+          >
+            {feature === 'X' ? `X > ${splitVal}` : `Y > ${splitVal}`}
+          </text>
+        </svg>
+
+        {/* X Axis Label */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none">
+          <span className="font-mono text-[8px] font-bold text-[#CCC] uppercase tracking-[0.4em]">Feature X Domain</span>
+        </div>
+        {/* Y Axis Label */}
+        <div className="absolute top-1/2 left-2 -translate-y-1/2 -rotate-90 origin-left pointer-events-none">
+          <span className="font-mono text-[8px] font-bold text-[#CCC] uppercase tracking-[0.4em]">Feature Y Domain</span>
+        </div>
+
         <div className="absolute inset-0 pointer-events-none">{DATA_POINTS.map((p, i) => <div key={i} className={`absolute w-3 h-3 rotate-45 border border-white/50 shadow-sm transition-all duration-500 ${p.label === 'A' ? 'bg-[#2A4D69]' : 'bg-[#E11D48]'}`} style={{ left: `${(p.x / 500) * 100}%`, top: `${(p.y / 500) * 100}%`, transform: 'translate(-50%, -50%) rotate(45deg)' }}>{isBiasPhase && p.group === 'Minority' && <div className="absolute inset-[-6px] rounded-full border border-[#D4A017] border-dashed animate-spin-slow pointer-events-none" />}</div>)}</div>
       </div>
       <div className={`w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8 transition-all duration-700 ${isIntro ? 'opacity-20 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'}`}>

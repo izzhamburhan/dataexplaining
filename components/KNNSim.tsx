@@ -116,6 +116,19 @@ const KNNSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInteract, onNe
         </div>
       </div>
       <div className="relative w-full h-[360px] bg-[#FDFCFB] border border-black/5 overflow-hidden cursor-crosshair mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]" onClick={handleGridClick}>
+        
+        {/* Color Legend */}
+        <div className="absolute top-4 right-4 z-30 bg-white/90 backdrop-blur-sm border border-black/5 p-3 flex flex-col space-y-2 shadow-sm pointer-events-none">
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 bg-[#2A4D69] rotate-45 border border-white/50" />
+            <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#666]">Class Alpha</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 bg-[#E11D48] rotate-45 border border-white/50" />
+            <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-[#666]">Class Beta</span>
+          </div>
+        </div>
+
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
           <g stroke="#F0F0F0" strokeWidth="1">
              {Array.from({length: 11}).map((_, i) => (
