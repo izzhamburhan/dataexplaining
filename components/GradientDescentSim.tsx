@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { audioService } from '../services/audioService';
+import { getMicroExplanation } from '../services/geminiService';
 import GuidanceTooltip from './GuidanceTooltip';
 
 type TrainingStatus = 'idle' | 'converged' | 'diverging' | 'slow' | 'unstable' | 'running';
@@ -30,6 +31,9 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
   const [activeTourIndex, setActiveTourIndex] = useState(0);
   const [probePoint, setProbePoint] = useState<number | null>(null);
+  const [geminiDesc, setGeminiDesc] = useState<string>('Syncing...');
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+  const debounceTimer = useRef<any>(null);
 
   const isIntro = currentStep === 0;
   const isEngineActive = currentStep === 1;
@@ -70,7 +74,6 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
     const gradient = 2 * point;
     const nextPoint = point - lr * gradient;
     
-    // Crucial: Update history before updating point to keep them in sync
     setHistory(prev => [...prev, point]);
     setPoint(nextPoint);
     setIterationCount(prev => prev + 1);
@@ -105,7 +108,6 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
 
   const analysis = useMemo((): { status: TrainingStatus; label: string; color: string; description: string } => {
     if (isIntro) return { status: 'idle', label: 'Probing Terrain', color: 'text-slate-400', description: 'Click the valley to measure the gradient at any point.' };
-    
     const lastX = point;
     const isConverged = Math.abs(lastX) < 0.05;
     const isDiverging = Math.abs(lastX) > 15;
@@ -114,13 +116,22 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
     return { status: 'idle', label: 'Monitoring Descent...', color: 'text-slate-300', description: 'Adjust alpha (α) and run the optimization engine.' };
   }, [point, isIntro]);
 
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(async () => {
+      setIsGeminiLoading(true);
+      const params = `Learning Rate: ${lr.toFixed(3)}, Epochs: ${iterationCount}, Status: ${analysis.status}`;
+      const res = await getMicroExplanation("Gradient Descent", params);
+      setGeminiDesc(res);
+      setIsGeminiLoading(false);
+    }, 1500);
+    return () => clearTimeout(debounceTimer.current);
+  }, [lr, iterationCount, analysis.status]);
+
   const handleTourNext = () => {
     audioService.play('click');
-    if (activeTourIndex < TOUR_STEPS.length - 1) {
-      setActiveTourIndex(prev => prev + 1);
-    } else {
-      onTourClose?.();
-    }
+    if (activeTourIndex < TOUR_STEPS.length - 1) setActiveTourIndex(prev => prev + 1);
+    else onTourClose?.();
   };
 
   const handleChartClick = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -145,7 +156,6 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
         />
       )}
 
-      {/* Header Info */}
       <div className="w-full flex justify-between items-end mb-12 border-b border-black/5 pb-6">
         <div>
           <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#CCC] mb-2">Diagnostic Output</h4>
@@ -157,14 +167,12 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
         </div>
       </div>
 
-      {/* Main Plot Area */}
       <div className="relative w-full h-[340px] bg-[#FDFCFB] border border-black/5 overflow-hidden mb-12 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
         <svg 
           className={`absolute inset-0 w-full h-full ${isIntro ? 'cursor-crosshair' : 'cursor-default'}`} 
           viewBox="-12 -5 24 130"
           onClick={handleChartClick}
         >
-          {/* Static Parabola */}
           <path 
             d={Array.from({ length: 101 }).map((_, i) => { 
               const x = (i / 4.16) - 12; 
@@ -176,8 +184,6 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
             strokeWidth="0.1" 
             className="opacity-10" 
           />
-          
-          {/* History / Trajectory - Removed transition to keep synced with point */}
           {isEngineActive && history.length > 0 && (
             <polyline 
               points={history.concat(point).map(p => `${p},${110 - p * p}`).join(' ')} 
@@ -187,40 +193,27 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
               strokeDasharray={analysis.status === 'converged' ? "0" : "0.8, 0.4"} 
             />
           )}
-
-          {/* Current Agent Point - Removed transition and entry animation for sync */}
           {!isIntro && (
             <g transform={`translate(${point}, ${110 - point * point})`}>
               <circle r="1.5" fill="white" stroke="#121212" strokeWidth="0.4" />
               <circle r="0.6" fill={analysis.status === 'diverging' ? '#E11D48' : '#2A4D69'} />
             </g>
           )}
-
-          {/* Probe Point - Phase 1 Only */}
           {isIntro && probePoint !== null && (
             <g transform={`translate(${probePoint}, ${110 - probePoint * probePoint})`}>
               <circle r="1.5" fill="#D4A017" fillOpacity="0.2" className="animate-ping" />
               <circle r="1.5" fill="white" stroke="#D4A017" strokeWidth="0.4" />
-              <line 
-                x1="-3" y1={3 * (2 * probePoint)} 
-                x2="3" y2={-3 * (2 * probePoint)} 
-                stroke="#D4A017" 
-                strokeWidth="0.2" 
-                strokeDasharray="0.5, 0.5" 
-              />
+              <line x1="-3" y1={3 * (2 * probePoint)} x2="3" y2={-3 * (2 * probePoint)} stroke="#D4A017" strokeWidth="0.2" strokeDasharray="0.5, 0.5" />
             </g>
           )}
         </svg>
-
         {isIntro && (
-          <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm border border-black/5 p-4 pointer-events-none">
-            <span className="font-mono text-[9px] font-bold text-[#AAA] uppercase tracking-widest block mb-1">Observation Protocol</span>
-            <p className="text-[10px] font-serif italic text-[#666]">Probing specific coordinates reveals the local gradient (slope).</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/5 backdrop-blur-[0.5px] pointer-events-none">
+            <span className="font-mono text-[9px] font-bold text-[#CCC] uppercase tracking-[0.5em]">Click Terrain to Probe Gradient</span>
           </div>
         )}
       </div>
 
-      {/* Controls Area */}
       <div className={`w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8 transition-all duration-700 ${isIntro ? 'opacity-20 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'}`}>
         <div className="space-y-6">
           <div>
@@ -228,40 +221,24 @@ const GradientDescentSim: React.FC<Props> = ({ adjustment, currentStep = 0, onIn
               <label className="text-[10px] font-mono font-bold text-[#999] uppercase tracking-widest">Learning Rate (α)</label>
               <span className="text-[10px] font-mono font-bold text-[#121212] bg-[#F9F8F6] px-2 py-0.5 border border-black/5 rounded shadow-sm">{lr.toFixed(3)}</span>
             </div>
-            <input 
-              type="range" 
-              min="0.01" max="1.1" step="0.01" 
-              value={lr} 
-              onChange={(e) => { 
-                setLr(parseFloat(e.target.value)); 
-                audioService.play('click'); 
-                markInteraction(); 
-                if (iterationCount > 0) reset(); 
-              }} 
-              className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" 
-            />
+            <input type="range" min="0.01" max="1.1" step="0.01" value={lr} onChange={(e) => { setLr(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); if (iterationCount > 0) reset(); }} className="w-full h-px bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
           </div>
-          <button 
-            onClick={() => { audioService.play('blip'); setIsAutoRunning(!isAutoRunning); markInteraction(); }} 
-            className={`w-full py-4 text-[10px] font-bold uppercase tracking-[0.3em] transition-all border ${isAutoRunning ? 'bg-transparent border-black/10 text-[#666]' : 'bg-[#121212] border-[#121212] text-white hover:bg-[#2A4D69] shadow-lg'}`}
-          >
-            {isAutoRunning ? 'Stop Simulation' : 'Run Optimization Engine'}
-          </button>
+          <button onClick={() => { audioService.play('blip'); setIsAutoRunning(!isAutoRunning); markInteraction(); }} className={`w-full py-4 text-[10px] font-bold uppercase tracking-[0.3em] transition-all border ${isAutoRunning ? 'bg-transparent border-black/10 text-[#666]' : 'bg-[#121212] border-[#121212] text-white hover:bg-[#2A4D69] shadow-lg'}`}>{isAutoRunning ? 'Stop Simulation' : 'Run Optimization Engine'}</button>
         </div>
-        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex items-center">
-          <p className="text-xs text-[#444] leading-relaxed italic font-serif">"{analysis.description}"</p>
+        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex flex-col justify-center">
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#999] mb-3">Model Analysis</h5>
+          <p className="text-xs text-[#444] leading-relaxed italic font-serif mb-4">"{analysis.description}"</p>
+          <div className="pt-4 border-t border-black/5">
+            <span className="text-[8px] font-mono font-bold text-[#2A4D69] uppercase tracking-widest block mb-1">Neural Insight</span>
+            <p className="text-[11px] text-[#2A4D69] font-serif italic">
+              {isGeminiLoading ? 'Optimizing...' : `"${geminiDesc}"`}
+            </p>
+          </div>
         </div>
       </div>
-
-      {/* Advance Manuscript Button */}
-      <button 
-        onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-        className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}
-      >
+      <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-6 px-10 font-bold uppercase tracking-[0.3em] text-sm transition-all shadow-xl flex items-center justify-center group ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
         {nextLabel || 'Advance Manuscript'}
-        <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
+        <svg className="ml-4 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
       </button>
     </div>
   );

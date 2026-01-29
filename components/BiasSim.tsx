@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { audioService } from '../services/audioService';
+import { getMicroExplanation } from '../services/geminiService';
 import GuidanceTooltip from './GuidanceTooltip';
 
 interface Candidate {
@@ -45,6 +46,9 @@ const BiasSim: React.FC<Props> = ({ currentStep, adjustment, onInteract, onNext,
   const [genderBias, setGenderBias] = useState(0.85);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
   const [activeTourIndex, setActiveTourIndex] = useState(0);
+  const [geminiDesc, setGeminiDesc] = useState<string>('Syncing...');
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+  const debounceTimer = useRef<any>(null);
 
   useEffect(() => { if (isTourActive) setActiveTourIndex(0); }, [isTourActive]);
   useEffect(() => { if (adjustment?.parameter === 'genderBias') { setGenderBias(adjustment.value); markInteraction(); } }, [adjustment]);
@@ -75,6 +79,18 @@ const BiasSim: React.FC<Props> = ({ currentStep, adjustment, onInteract, onNext,
     if (biasIndex > 30) return { label: 'Proxy Bias Detected', color: 'text-rose-600', desc: 'Gender heavily outweighs merit in current decisions.' };
     return { label: 'Fair Protocol', color: 'text-emerald-600', desc: 'Decisions follow experience signals and meritocracy.' };
   }, [biasIndex]);
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(async () => {
+      setIsGeminiLoading(true);
+      const params = `Gender Bias: ${genderBias.toFixed(2)}, Bias Index: ${biasIndex.toFixed(0)}, Results Visible: ${showResults}`;
+      const res = await getMicroExplanation("Algorithmic Bias", params);
+      setGeminiDesc(res);
+      setIsGeminiLoading(false);
+    }, 1500);
+    return () => clearTimeout(debounceTimer.current);
+  }, [genderBias, biasIndex, showResults]);
 
   const handleTourNext = () => {
     audioService.play('click');
@@ -128,8 +144,15 @@ const BiasSim: React.FC<Props> = ({ currentStep, adjustment, onInteract, onNext,
       </div>
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-12 mb-8">
         {currentStep === 1 ? <button onClick={runModel} disabled={isProcessing} className="w-full py-5 text-[11px] font-bold uppercase tracking-[0.3em] bg-[#121212] text-white hover:bg-[#2A4D69] disabled:opacity-50 transition-all shadow-xl">{isProcessing ? 'Auditing Logic...' : 'Execute Decision Model'}</button> : <div className="p-8 border-2 border-dashed border-black/5 flex items-center justify-center text-[10px] font-mono text-[#AAA] uppercase tracking-widest">Awaiting Simulation Stage</div>}
-        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex items-center">
-          <p className="text-sm text-[#444] italic font-serif leading-relaxed">"{analysis.desc}"</p>
+        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 min-h-[140px] flex flex-col justify-center">
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#999] mb-3">Model Analysis</h5>
+          <p className="text-sm text-[#444] leading-relaxed italic font-normal mb-4">"{analysis.desc}"</p>
+          <div className="pt-4 border-t border-black/5">
+            <span className="text-[8px] font-mono font-bold text-[#2A4D69] uppercase tracking-widest block mb-1">Neural Insight</span>
+            <p className="text-[11px] text-[#2A4D69] font-serif italic">
+              {isGeminiLoading ? 'Synthesizing...' : `"${geminiDesc}"`}
+            </p>
+          </div>
         </div>
       </div>
       <button onClick={onNext} className={`w-full bg-[#121212] hover:bg-[#2A4D69] text-white py-5 font-bold uppercase tracking-[0.3em] text-xs transition-all shadow-xl ${hasActuallyInteracted ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>

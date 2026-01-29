@@ -55,6 +55,19 @@ export const getGeminiExplanation = async (topic: string, context: string, param
   }
 };
 
+export const getMicroExplanation = async (topic: string, params: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `You are a data science assistant. Provide a concise reaction or status for a ${topic} model with parameters: ${params}. Use 7-10 words maximum.`,
+    });
+    return response.text || "Calculating...";
+  } catch (error) {
+    return "Standby...";
+  }
+};
+
 export const generateModelDescription = async (modelName: string, userContext?: UserContext | null) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {

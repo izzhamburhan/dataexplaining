@@ -1,6 +1,7 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { audioService } from '../services/audioService';
+import { getMicroExplanation } from '../services/geminiService';
 import GuidanceTooltip from './GuidanceTooltip';
 
 const DATA_POINTS = [
@@ -32,6 +33,9 @@ const RegressionSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInterac
   const [intercept, setIntercept] = useState(500);
   const [activeTourIndex, setActiveTourIndex] = useState(0);
   const [hasActuallyInteracted, setHasActuallyInteracted] = useState(false);
+  const [geminiDesc, setGeminiDesc] = useState<string>('Syncing...');
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+  const debounceTimer = useRef<any>(null);
 
   // Phases based on currentStep (0, 1, 2)
   const isIntro = currentStep === 0;
@@ -83,6 +87,23 @@ const RegressionSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInterac
     if (mse < 3000) return { label: 'Approximated Trend', color: 'text-amber-600', desc: 'The model follows the general direction but lacks alignment.' };
     return { label: 'Poor Correlation', color: 'text-rose-600', desc: 'The model is misaligned with the data distribution.' };
   }, [errorDetails.mse, isIntro]);
+
+  // Fetch micro-explanation from Gemini with debounce
+  useEffect(() => {
+    if (isIntro) return;
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    
+    debounceTimer.current = setTimeout(async () => {
+      setIsGeminiLoading(true);
+      const params = `Slope: ${slope.toFixed(2)}, Intercept: ${intercept.toFixed(0)}, MSE: ${Math.round(errorDetails.mse)}`;
+      const res = await getMicroExplanation("Linear Regression", params);
+      setGeminiDesc(res);
+      setIsGeminiLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(debounceTimer.current);
+  }, [slope, intercept, errorDetails.mse, isIntro]);
 
   const handleTourNext = () => {
     audioService.play('click');
@@ -187,9 +208,15 @@ const RegressionSim: React.FC<Props> = ({ adjustment, currentStep = 0, onInterac
             <input type="range" min="0" max="600" step="1" value={intercept} onChange={(e) => { setIntercept(parseFloat(e.target.value)); audioService.play('click'); markInteraction(); }} className="w-full h-1 bg-black/10 rounded-full appearance-none cursor-pointer accent-[#2A4D69]" />
           </div>
         </div>
-        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 h-full">
-          <h5 className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#999] mb-4">Model Analysis</h5>
-          <p className="text-sm text-[#444] leading-relaxed italic font-normal">"{analysis.desc}"</p>
+        <div className="bg-[#F9F8F6] p-8 border-l-4 border-black/5 h-full flex flex-col justify-center">
+          <h5 className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-[#999] mb-3">Model Analysis</h5>
+          <p className="text-sm text-[#444] leading-relaxed italic font-normal mb-4">"{analysis.desc}"</p>
+          <div className={`transition-all duration-700 pt-4 border-t border-black/5 ${isIntro ? 'opacity-0' : 'opacity-100'}`}>
+             <span className="text-[8px] font-mono font-bold text-[#2A4D69] uppercase tracking-widest block mb-1">Neural Insight</span>
+             <p className="text-[11px] text-[#2A4D69] font-serif italic">
+               {isGeminiLoading ? 'Interpreting...' : `"${geminiDesc}"`}
+             </p>
+          </div>
         </div>
       </div>
 
