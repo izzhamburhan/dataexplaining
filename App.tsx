@@ -84,7 +84,7 @@ const Footer: React.FC<{ onOpenInfo: (type: 'about' | 'contact') => void }> = ({
   <footer className="py-8 border-t border-black/5">
     <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
       <div className="flex items-center space-x-4">
-        <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">© 2025 Dataxplaining ● All Rights Reserved</span>
+        <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">© 2026 Dataxplaining ● All Rights Reserved</span>
       </div>
       <div className="flex items-center space-x-12">
         <button 

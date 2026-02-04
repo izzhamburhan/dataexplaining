@@ -10,6 +10,7 @@ The application is structured as a library of interactive manuscripts covering 1
 
 *   **Interactive Simulations:** Real-time SVG-based playgrounds for Linear Regression, Gradient Descent, KNN, CNN Filters, SVMs, and more.
 *   **Step-by-Step Pedagogy:** Each lesson is broken into "Phases" (Foundations, Optimization, and Ethical Audit) to guide the user from basic mechanics to societal impact.
+*   **Neural Insights:** Real-time micro-explanations powered by Gemini 3 Flash that provide immediate feedback and diagnostic status as users adjust simulation parameters.
 *   **Consult Deep Reasoning:** A feature powered by the Gemini API that analyzes the current state of a user's simulation and provides a contextual explanation and calibration suggestions.
 *   **Personalization Engine:** Users can define their industry and role (e.g., "Architect in Healthcare") to have the system tailor explanations and future-use prophecies to their specific context.
 *   **Voice Laboratory:** A real-time, low-latency audio interaction mode where users can speak directly to a "Research Assistant" about the active lesson.
@@ -18,7 +19,7 @@ The application is structured as a library of interactive manuscripts covering 1
 
 *    Linear Regression
 *    Gradient Descent
-*    Logistic Resgression
+*    Logistic Regression
 *    K-Nearest Neighbors
 *    Decision Trees
 *    Random Forest
