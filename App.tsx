@@ -30,8 +30,6 @@ interface AiResponse {
   suggestions: { label: string; parameter: string; value: number } | { label: string; parameter: string; value: number }[];
 }
 
-const SUPPORT_URL = "https://buymeacoffee.com/izzhamburhan";
-
 const InfoModal: React.FC<{ 
   isOpen: boolean; 
   type: 'about' | 'contact' | null; 
@@ -53,10 +51,6 @@ const InfoModal: React.FC<{
             <div className="flex flex-col">
               <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-[0.2em] mb-1">Electronic Mail</span>
               <a href="mailto:maizzham01@gmail.com" className="text-sm font-serif italic text-[#121212] hover:text-[#2A4D69] transition-colors underline decoration-black/10 underline-offset-4">maizzham01@gmail.com</a>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-[0.2em] mb-1">Patronage Ledger</span>
-              <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-sm font-serif italic text-[#E11D48] hover:text-[#121212] transition-colors underline decoration-rose-200 underline-offset-4">Buy Me a Coffee</a>
             </div>
             <div className="flex flex-col">
               <span className="text-[8px] font-mono font-bold text-[#CCC] uppercase tracking-[0.2em] mb-1">Instagram Journal</span>
@@ -106,16 +100,6 @@ const Footer: React.FC<{ onOpenInfo: (type: 'about' | 'contact') => void }> = ({
         >
           Contact
         </button>
-        <div className="w-1 h-1 bg-black/5 rotate-45"></div>
-        <a 
-          href={SUPPORT_URL} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          onClick={() => audioService.play('click')}
-          className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#E11D48] hover:text-[#121212] transition-colors"
-        >
-          Support
-        </a>
       </div>
       <div className="flex items-center space-x-2">
         <span className="text-[7px] font-mono font-bold text-[#CCC] uppercase tracking-[0.3em]">Platform Protocol v1.5.0</span>
@@ -312,21 +296,9 @@ const App: React.FC = () => {
               {userContext ? 'Profile' : 'Personalize'}
             </button>
           </div>
-          <div className="flex items-center space-x-6">
-            <button onClick={() => setIsChatbotOpen(true)} className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#666] hover:text-[#121212]">
-              Reference Desk
-            </button>
-            <a 
-              href={SUPPORT_URL} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              onClick={() => audioService.play('click')}
-              className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#E11D48] hover:text-[#121212] transition-colors flex items-center"
-            >
-              Patronage
-              <div className="w-1 h-1 bg-[#E11D48] rounded-full ml-1.5 animate-pulse" />
-            </a>
-          </div>
+          <button onClick={() => setIsChatbotOpen(true)} className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#666] hover:text-[#121212]">
+            Reference Desk
+          </button>
         </div>
       </nav>
 
